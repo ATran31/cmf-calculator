@@ -5,7 +5,7 @@ import functools
 
 class Study_Area:
     """
-    Class to represent a study area.
+    Class to define and execute CMF studies.
     """
 
     def __init__(
@@ -47,10 +47,10 @@ class Study_Area:
     def calculate_crash_cmfs(
         self,
         crash_milepost: float,
-        severity: str = "All",
-        crash_type: str = "All",
-        crash_dir: str = "All",
-        crash_time: str = "All",
+        severity: str = "all",
+        crash_type: str = "all",
+        crash_dir: str = "all",
+        crash_time: str = "all",
     ) -> list:
         """
         Returns the product of all input CMF value(s) that match the given input parameters at the crash milepost.
