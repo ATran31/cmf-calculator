@@ -19,8 +19,11 @@ class Crash_Reports:
         end_milepost: float,
         start_year: int,
         end_year: int,
-    ) -> dict:
-        "Executes a GET request against the crash data API to return desired crash information."
+    ) -> list:
+        """
+        Executes a GET request against the crash data API.
+        Returns desired crash reports as list of dicts.
+        """
         columns = [
             "report_no",
             "county_desc",
