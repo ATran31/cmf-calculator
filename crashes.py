@@ -117,7 +117,6 @@ class Crash_Reports:
         return injury_count_all
 
     @staticmethod
-    @staticmethod
     def count_property_damage(crashes: list, year: int = None) -> int:
         """
         Return the number of property damage crashes.
@@ -136,7 +135,6 @@ class Crash_Reports:
             return prop_damage_count_year
         return prop_damage_count_all
 
-    @staticmethod
     @staticmethod
     def count_collision_type(crashes: list, crash_type: str, year: int = None) -> int:
         """
