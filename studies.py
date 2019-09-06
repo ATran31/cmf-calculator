@@ -44,7 +44,7 @@ class Study_Area:
         """
         return (self.input_cmfs.Start_MP.min(), self.input_cmfs.End_MP.max())
 
-    def calculate_crash_cmfs(
+    def get_crash_cmfs(
         self,
         crash_milepost: float,
         severity: str = "all",
