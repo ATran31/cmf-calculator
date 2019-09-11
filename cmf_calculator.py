@@ -1,4 +1,8 @@
+import pandas as pd
+import os
 from gooey import Gooey, GooeyParser
+import soda
+from studies import Study_Area
 
 
 @Gooey(program_name="CMF Calculator", navigation="TABBED")
@@ -113,6 +117,133 @@ def main():
     )
 
     args = parser.parse_args()
+
+    # define study area
+    study = Study_Area(
+        args.route_prefix,
+        args.route_number,
+        args.start_milepost,
+        args.end_milepost,
+        args.start_year,
+        args.end_year,
+        args.input_cmfs,
+    )
+
+    # define crash reports
+    crashes = soda.fetch_crash_reports(
+        args.crash_data,
+        args.route_prefix,
+        args.route_number,
+        args.start_milepost,
+        args.end_milepost,
+        args.start_year,
+        args.end_year,
+    )
+
+    # loop through crashes and calculate total CMFs for each crash
+    # calculations should be for both travel directions and the total
+    # add the calculated value as a new crash attributes
+    for crash in crashes:
+        crash_cmfs = study.get_crash_cmfs(
+            crash_milepost=crash["log_mile"],
+            severity=crash["report_type"],
+            crash_type=crash["collision_type_desc"],
+            crash_dir=crash["logmile_dir_flag"],
+            crash_time=crash["acc_time"],
+        )
+        crash["calculated_cmf"] = study.reduce_cmfs(crash_cmfs)
+
+    # generate the crash summary report
+    crash_types = soda.get_crash_types(crashes)
+    crash_directions = soda.get_crash_directions(crashes)
+
+    d0_summary = []
+    d1_summary = []
+    total_summary = []
+
+    for year in range(args.start_year, args.end_year + 1):
+        row = {}
+        row_d0 = {}
+        row_d1 = {}
+
+        row["year"] = year
+        row_d0["year"] = year
+        row_d1["year"] = year
+
+        # count fatal in year
+        row["fatal"] = soda.count_fatal_crashes(crashes, year)
+        # count fatal in year for each direction
+        row_d0["fatal"] = soda.count_fatal_crashes(crashes, year, crash_directions[0])
+        row_d1["fatal"] = soda.count_fatal_crashes(crashes, year, crash_directions[1])
+
+        # count injury in year
+        row["injury"] = soda.count_injuries(crashes, year)
+        # count injury in year for each direction
+        row_d0["injury"] = soda.count_injuries(crashes, year, crash_directions[0])
+        row_d1["injury"] = soda.count_injuries(crashes, year, crash_directions[1])
+
+        # count property damage in year
+        row["property damage"] = soda.count_property_damage(crashes, year)
+        # count property damage in year for each direction
+        row_d0["property damage"] = soda.count_property_damage(
+            crashes, year, crash_directions[0]
+        )
+        row_d1["property damage"] = soda.count_property_damage(
+            crashes, year, crash_directions[1]
+        )
+
+        for crash_type in crash_types:
+            # count specific crash types in year
+            row[crash_type] = soda.count_collision_type(crashes, crash_type, year)
+            # count specific crash types in each direction
+            row_d0[crash_type] = soda.count_collision_type(
+                crashes, crash_type, year, crash_directions[0]
+            )
+            row_d0[crash_type] = soda.count_collision_type(
+                crashes, crash_type, year, crash_directions[0]
+            )
+
+        d0_summary.append(row_d0)
+        d1_summary.append(row_d1)
+        total_summary.append(row)
+
+    d0_summ_df = pd.DataFrame(d0_summary)
+    d1_summ_df = pd.DataFrame(d1_summary)
+    total_summ_df = pd.DataFrame(total_summary)
+
+    # generate analysis summary for direction 1
+
+    # generate analysis summary for direction 2
+
+    # generate analysis summary for both directions
+
+    # convert soda list object to pandas dataframe
+    # do this step last so that we can simply write the dataframe to output Excel file.
+    raw_crashes_df = pd.DataFrame(crashes)
+
+    # write output reports to Excel
+    # the output report will be saved to the same location as the input Excel file containing CMF values defined for this study
+    out_dir = os.path.split(args.input_cmfs)[0]
+    out_file = f"{args.route_prefix}-{args.route_number} [{args.start_milepost}-{args.end_milepost}] ({args.start_year}-{args.end_year}) CMF Analysis.xlsx"
+    xlsx_writer = pd.ExcelWriter(os.path.join(outdir, out_file), engine="xlsxwriter")
+
+    # write raw crash data
+    pd.DataFrame(crashes).to_excel(xlsx_writer, sheet_name="Crash Data")
+
+    # write crash summary report
+    d0_summ_df.to_excel(xlsx_writer, sheet_name="Crash Summary", startrow=0, startcol=0)
+    d1_summ_df.to_excel(
+        xlsx_writer,
+        sheet_name="Crash Summary",
+        startrow=len(d0_summary) + 1,
+        startcol=0,
+    )
+    total_summ_df.to_excel(
+        xlsx_writer,
+        sheet_name="Crash Summary",
+        startrow=len(d1_summary) + 1,
+        startcol=0,
+    )
 
 
 if __name__ == "__main__":
