@@ -33,16 +33,19 @@ def fetch_crash_reports(
     r = requests.get(query_url)
     if r.status_code == 200:
         crashes = r.json()
+        scrubbed_crashes = []
         for crash in crashes:
-            # reformat crash time into hh:mm:ss format
-            crash[
-                "acc_time"
-            ] = f"{crash['acc_time'][:2]}:{crash['acc_time'][2:4]}:{crash['acc_time'][4:]}"
-            # reformat crash date into yyyy-mm-dd format
-            crash[
-                "acc_date"
-            ] = f"{crash['acc_date'][:4]}-{crash['acc_date'][4:6]}-{crash['acc_date'][6:]}"
-        return crashes
+            if list(crash.keys()) == columns:
+                # reformat crash time into hh:mm:ss format
+                crash[
+                    "acc_time"
+                ] = f"{crash['acc_time'][:2]}:{crash['acc_time'][2:4]}:{crash['acc_time'][4:]}"
+                # reformat crash date into yyyy-mm-dd format
+                crash[
+                    "acc_date"
+                ] = f"{crash['acc_date'][:4]}-{crash['acc_date'][4:6]}-{crash['acc_date'][6:]}"
+                scrubbed_crashes.append(crash)
+        return scrubbed_crashes
     else:
         r.raise_for_status()
 
