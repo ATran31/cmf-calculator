@@ -60,7 +60,6 @@ class Study_Area:
             f"Start_MP <= {crash_milepost} and {crash_milepost} <= End_MP",
             inplace=False,
         )
-        cmf_stack = results.iloc[:, 6]
         for row in range(len(results)):
             if (
                 (
@@ -80,8 +79,7 @@ class Study_Area:
                     or results.iloc[row].Time.lower() == crash_time.lower()
                 )
             ):
-                coefficients.append(cmf_stack.pop(row))
-
+                coefficients.append(results.iloc[row].CMF)
         return coefficients
 
     @staticmethod
