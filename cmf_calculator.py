@@ -20,7 +20,7 @@ def main():
 
     # study related args
     study_settings_grp.add_argument(
-        "route-prefix",
+        "route_prefix",
         type=str,
         choices=[
             "IS",
@@ -41,7 +41,7 @@ def main():
         help="The type of route e.g. IS (interstate), US (US route), MD (State route) etc.)",
     )
     study_settings_grp.add_argument(
-        "route-number",
+        "route_number",
         type=int,
         help="The route number.",
         gooey_options={
@@ -52,7 +52,7 @@ def main():
         },
     )
     study_settings_grp.add_argument(
-        "start-milepost",
+        "start_milepost",
         type=float,
         help="Starting milepost of analysis area.",
         gooey_options={
@@ -63,7 +63,7 @@ def main():
         },
     )
     study_settings_grp.add_argument(
-        "end-milepost",
+        "end_milepost",
         type=float,
         help="Ending milepost of analysis area.",
         gooey_options={
@@ -74,7 +74,7 @@ def main():
         },
     )
     study_settings_grp.add_argument(
-        "start-year",
+        "start_year",
         type=int,
         help="Analyze crash data starting in this year.",
         gooey_options={
@@ -85,7 +85,7 @@ def main():
         },
     )
     study_settings_grp.add_argument(
-        "end-year",
+        "end_year",
         type=int,
         help="Analyze crash data up to this year.",
         gooey_options={
@@ -110,7 +110,7 @@ def main():
         },
     )
     data_source_grp.add_argument(
-        "crash-data",
+        "crash_data",
         type=str,
         default="https://opendata.maryland.gov/resource/65du-s3qu.json",
         help="The URL where crash reports can be fetched.",
@@ -126,7 +126,7 @@ def main():
         args.end_milepost,
         args.start_year,
         args.end_year,
-        args.input_cmfs,
+        args.input_cmf,
     )
 
     # define crash reports
@@ -223,7 +223,7 @@ def main():
 
     # write output reports to Excel
     # the output report will be saved to the same location as the input Excel file containing CMF values defined for this study
-    out_dir = os.path.split(args.input_cmfs)[0]
+    out_dir = os.path.split(args.input_cmf)[0]
     out_file = f"{args.route_prefix}-{args.route_number} [{args.start_milepost}-{args.end_milepost}] ({args.start_year}-{args.end_year}) CMF Analysis.xlsx"
     xlsx_writer = pd.ExcelWriter(os.path.join(outdir, out_file), engine="xlsxwriter")
 
