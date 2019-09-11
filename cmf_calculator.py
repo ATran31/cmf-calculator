@@ -211,11 +211,11 @@ def main():
     d1_summ_df = pd.DataFrame(d1_summary)
     total_summ_df = pd.DataFrame(total_summary)
 
-    # generate analysis summary for direction 1
+    # TODO generate analysis summary for direction 1
 
-    # generate analysis summary for direction 2
+    # TODO generate analysis summary for direction 2
 
-    # generate analysis summary for both directions
+    # TODO generate analysis summary for both directions
 
     # convert soda list object to pandas dataframe
     # do this step last so that we can simply write the dataframe to output Excel file.
@@ -225,7 +225,7 @@ def main():
     # the output report will be saved to the same location as the input Excel file containing CMF values defined for this study
     out_dir = os.path.split(args.input_cmf)[0]
     out_file = f"{args.route_prefix}-{args.route_number} [{args.start_milepost}-{args.end_milepost}] ({args.start_year}-{args.end_year}) CMF Analysis.xlsx"
-    xlsx_writer = pd.ExcelWriter(os.path.join(outdir, out_file), engine="xlsxwriter")
+    xlsx_writer = pd.ExcelWriter(os.path.join(out_dir, out_file), engine="openpyxl")
 
     # write raw crash data
     pd.DataFrame(crashes).to_excel(xlsx_writer, sheet_name="Crash Data")
@@ -244,6 +244,9 @@ def main():
         startrow=len(d1_summary) + 1,
         startcol=0,
     )
+
+    # save output excel file
+    xlsx_writer.save()
 
 
 if __name__ == "__main__":
