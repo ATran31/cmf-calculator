@@ -57,29 +57,31 @@ class Study_Area:
         """
         coefficients = []
         results = self.input_cmfs.query(
-            f"Start_MP <= {crash_milepost} and {crash_milepost} < End_MP", inplace=False
+            f"Start_MP <= {crash_milepost} and {crash_milepost} <= End_MP",
+            inplace=False,
         )
-        cmf_stack = results.iloc[0 : len(results), 6]
+        cmf_stack = results.iloc[:, 6]
         for row in range(len(results)):
             if (
                 (
-                    results[row]["Severity"].lower() == "all"
-                    or results[row]["Severity"].lower() == severity.lower()
+                    results.iloc[row].Severity.lower() == "all"
+                    or results.iloc[row].Severity.lower() == severity.lower()
                 )
                 and (
-                    results[row]["Crash_Type"].lower() == "all"
-                    or results[row]["Crash_Type"] == crash_type.lower()
+                    results.iloc[row].Crash_Type.lower() == "all"
+                    or results.iloc[row].Crash_Type.lower() == crash_type.lower()
                 )
                 and (
-                    results[row]["Direction"].lower() == "all"
-                    or results[row]["Direction"] == crash_dir.lower()
+                    results.iloc[row].Direction.lower() == "all"
+                    or results.iloc[row].Direction.lower() == crash_dir.lower()
                 )
                 and (
-                    results[row]["Time"].lower() == "all"
-                    or results[row]["Time"] == crash_time.lower()
+                    results.iloc[row].Time.lower() == "all"
+                    or results.iloc[row].Time.lower() == crash_time.lower()
                 )
             ):
                 coefficients.append(cmf_stack.pop(row))
+
         return coefficients
 
     @staticmethod
