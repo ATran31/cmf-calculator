@@ -68,7 +68,7 @@ def get_crash_types(crashes: list) -> tuple:
     crash_types = []
     for crash in crashes:
         if crash["collision_type_desc"] not in crash_types:
-            crash_types.append("collision_type_desc")
+            crash_types.append(crash["collision_type_desc"])
     crash_types.sort()
     return tuple(crash_types)
 
@@ -80,7 +80,7 @@ def get_crash_directions(crashes: list) -> tuple:
     crash_dirs = []
     for crash in crashes:
         if crash["logmile_dir_flag"] not in crash_dirs:
-            crash_dirs.append("logmile_dir_flag")
+            crash_dirs.append(crash["logmile_dir_flag"])
     crash_dirs.sort()
     return tuple(crash_dirs)
 
