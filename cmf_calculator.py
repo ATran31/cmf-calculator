@@ -17,6 +17,9 @@ def main():
     data_source_grp = parser.add_argument_group(
         "Data Source Settings", gooey_options={"columns": 1}
     )
+    output_settings_grp = parser.add_argument_group(
+        "Optional Outputs", gooey_options={"columns": 2}
+    )
 
     # study related args
     study_settings_grp.add_argument(
@@ -116,6 +119,23 @@ def main():
         help="The URL where crash reports can be fetched.",
     )
 
+    # optional settings related args
+    output_settings_grp.add_argument(
+        "-include_input_cmfs",
+        action="store_true",
+        help="Include input study area CMF definitions in output.",
+    )
+    output_settings_grp.add_argument(
+        "-include_crash_data",
+        action="store_true",
+        help="Include raw crash data in output.",
+    )
+    output_settings_grp.add_argument(
+        "-include_crash_summary",
+        action="store_true",
+        help="Include summary count of raw crashes.",
+    )
+
     args = parser.parse_args()
 
     # define study area
@@ -140,6 +160,12 @@ def main():
         args.end_year,
     )
 
+    # define output reports to Excel
+    # the output report will be saved to the same location as the input Excel file containing CMF values defined for this study
+    out_dir = os.path.split(args.input_cmf)[0]
+    out_file = f"{args.route_prefix}-{args.route_number} [{args.start_milepost}-{args.end_milepost}] ({args.start_year}-{args.end_year}) CMF Analysis.xlsx"
+    xlsx_writer = pd.ExcelWriter(os.path.join(out_dir, out_file), engine="openpyxl")
+
     # loop through crashes and calculate total CMFs for each crash
     # calculations should be for both travel directions and the total
     # add the calculated value as a new crash attributes
@@ -153,114 +179,127 @@ def main():
         )
         crash["calculated_cmf"] = study.reduce_cmfs(crash_cmfs)
 
-    # generate the crash summary report
-    crash_types = soda.get_crash_types(crashes)
-    crash_directions = soda.get_crash_directions(crashes)
-
-    d0_summary = []
-    d1_summary = []
-    total_summary = []
-
-    for year in range(args.start_year, args.end_year + 1):
-        row = {}
-        row_d0 = {}
-        row_d1 = {}
-
-        row["year"] = year
-        row_d0["year"] = year
-        if len(crash_directions) > 1:
-            row_d1["year"] = year
-
-        row["logmile_dir"] = "ALL"
-        row_d0["logmile_dir"] = crash_directions[0]
-        if len(crash_directions) > 1:
-            row_d1["logmile_dir"] = crash_directions[1]
-
-        # count fatal in year
-        row["fatal"] = soda.count_fatal_crashes(crashes, year)
-        # count fatal in year for each direction
-        row_d0["fatal"] = soda.count_fatal_crashes(crashes, year, crash_directions[0])
-        if len(crash_directions) > 1:
-            row_d1["fatal"] = soda.count_fatal_crashes(
-                crashes, year, crash_directions[1]
-            )
-
-        # count injury in year
-        row["injury"] = soda.count_injuries(crashes, year)
-        # count injury in year for each direction
-        row_d0["injury"] = soda.count_injuries(crashes, year, crash_directions[0])
-        if len(crash_directions) > 1:
-            row_d1["injury"] = soda.count_injuries(crashes, year, crash_directions[1])
-
-        # count property damage in year
-        row["property damage"] = soda.count_property_damage(crashes, year)
-        # count property damage in year for each direction
-        row_d0["property damage"] = soda.count_property_damage(
-            crashes, year, crash_directions[0]
-        )
-        if len(crash_directions) > 1:
-            row_d1["property damage"] = soda.count_property_damage(
-                crashes, year, crash_directions[1]
-            )
-
-        for crash_type in crash_types:
-            # count specific crash types in year
-            row[crash_type] = soda.count_collision_type(crashes, crash_type, year)
-            # count specific crash types in each direction
-            row_d0[crash_type] = soda.count_collision_type(
-                crashes, crash_type, year, crash_directions[0]
-            )
-            if len(crash_directions) > 1:
-                row_d1[crash_type] = soda.count_collision_type(
-                    crashes, crash_type, year, crash_directions[1]
-                )
-
-        d0_summary.append(row_d0)
-        if row_d1:
-            d1_summary.append(row_d1)
-        total_summary.append(row)
-
-    d0_summ_df = pd.DataFrame(d0_summary)
-    d1_summ_df = pd.DataFrame(d1_summary)
-    total_summ_df = pd.DataFrame(total_summary)
-
-    # convert soda list object to pandas dataframe
-    # do this step last so that we can simply write the dataframe to output Excel file.
-    raw_crashes_df = pd.DataFrame(crashes)
-
-    # write output reports to Excel
-    # the output report will be saved to the same location as the input Excel file containing CMF values defined for this study
-    out_dir = os.path.split(args.input_cmf)[0]
-    out_file = f"{args.route_prefix}-{args.route_number} [{args.start_milepost}-{args.end_milepost}] ({args.start_year}-{args.end_year}) CMF Analysis.xlsx"
-    xlsx_writer = pd.ExcelWriter(os.path.join(out_dir, out_file), engine="openpyxl")
+    # write input cmf definitions
+    if args.include_input_cmfs:
+        study.input_cmfs.to_excel(xlsx_writer, sheet_name="Input CMFs", index=False)
 
     # write raw crash data
-    crashes_df = pd.DataFrame(crashes)
-    crashes_df.to_excel(xlsx_writer, sheet_name="Crash Data", index=False)
+    if args.include_crash_data:
+        crashes_df = pd.DataFrame(crashes)
+        crashes_df.to_excel(xlsx_writer, sheet_name="Crash Data", index=False)
 
-    # write crash summary report
-    d0_summ_df.loc["Total", :] = d0_summ_df.loc[:, "fatal":].sum(axis=0)
-    d0_summ_df.to_excel(
-        xlsx_writer, sheet_name="Crash Summary", startrow=0, startcol=0, index=True
-    )
+    # generate the crash summary report
+    if args.include_crash_summary:
+        crash_types = soda.get_crash_types(crashes)
+        crash_directions = soda.get_crash_directions(crashes)
 
-    if not d1_summ_df.empty:
-        d1_summ_df.loc["Total", :] = d1_summ_df.loc[:, "fatal":].sum(axis=0)
-        d1_summ_df.to_excel(
-            xlsx_writer,
-            sheet_name="Crash Summary",
-            startrow=len(d0_summary) + 3,
-            startcol=0,
-            index=True,
+        d0_summary = []
+        d1_summary = []
+        total_summary = []
+
+        for year in range(args.start_year, args.end_year + 1):
+            row = {}
+            row_d0 = {}
+            row_d1 = {}
+
+            row["year"] = year
+            row_d0["year"] = year
+            if len(crash_directions) > 1:
+                row_d1["year"] = year
+
+            row["logmile_dir"] = "ALL"
+            row_d0["logmile_dir"] = crash_directions[0]
+            if len(crash_directions) > 1:
+                row_d1["logmile_dir"] = crash_directions[1]
+
+            # count fatal in year
+            row["fatal"] = soda.count_fatal_crashes(crashes, year)
+            # count fatal in year for each direction
+            row_d0["fatal"] = soda.count_fatal_crashes(
+                crashes, year, crash_directions[0]
+            )
+            if len(crash_directions) > 1:
+                row_d1["fatal"] = soda.count_fatal_crashes(
+                    crashes, year, crash_directions[1]
+                )
+
+            # count injury in year
+            row["injury"] = soda.count_injuries(crashes, year)
+            # count injury in year for each direction
+            row_d0["injury"] = soda.count_injuries(crashes, year, crash_directions[0])
+            if len(crash_directions) > 1:
+                row_d1["injury"] = soda.count_injuries(
+                    crashes, year, crash_directions[1]
+                )
+
+            # count property damage in year
+            row["property damage"] = soda.count_property_damage(crashes, year)
+            # count property damage in year for each direction
+            row_d0["property damage"] = soda.count_property_damage(
+                crashes, year, crash_directions[0]
+            )
+            if len(crash_directions) > 1:
+                row_d1["property damage"] = soda.count_property_damage(
+                    crashes, year, crash_directions[1]
+                )
+
+            for crash_type in crash_types:
+                # count specific crash types in year
+                row[crash_type] = soda.count_collision_type(crashes, crash_type, year)
+                # count specific crash types in each direction
+                row_d0[crash_type] = soda.count_collision_type(
+                    crashes, crash_type, year, crash_directions[0]
+                )
+                if len(crash_directions) > 1:
+                    row_d1[crash_type] = soda.count_collision_type(
+                        crashes, crash_type, year, crash_directions[1]
+                    )
+
+            d0_summary.append(row_d0)
+            if row_d1:
+                d1_summary.append(row_d1)
+            total_summary.append(row)
+
+        d0_summ_df = pd.DataFrame(d0_summary)
+        d1_summ_df = pd.DataFrame(d1_summary)
+        total_summ_df = pd.DataFrame(total_summary)
+
+        # convert soda list object to pandas dataframe
+        # do this step last so that we can simply write the dataframe to output Excel file.
+        raw_crashes_df = pd.DataFrame(crashes)
+
+        # write crash summary report
+        d0_summ_df.loc["Total", :] = d0_summ_df.loc[:, "fatal":].sum(axis=0)
+        d0_summ_df.to_excel(
+            xlsx_writer, sheet_name="Crash Summary", startrow=0, startcol=0, index=True
         )
-        total_summ_df.loc["Total", :] = total_summ_df.loc[:, "fatal":].sum(axis=0)
-        total_summ_df.to_excel(
-            xlsx_writer,
-            sheet_name="Crash Summary",
-            startrow=(len(d0_summary) + 3) * 2,
-            startcol=0,
-            index=True,
-        )
+
+        if not d1_summ_df.empty:
+            d1_summ_df.loc["Total", :] = d1_summ_df.loc[:, "fatal":].sum(axis=0)
+            d1_summ_df.to_excel(
+                xlsx_writer,
+                sheet_name="Crash Summary",
+                startrow=len(d0_summary) + 3,
+                startcol=0,
+                index=True,
+            )
+            total_summ_df.loc["Total", :] = total_summ_df.loc[:, "fatal":].sum(axis=0)
+            total_summ_df.to_excel(
+                xlsx_writer,
+                sheet_name="Crash Summary",
+                startrow=(len(d0_summary) + 3) * 2,
+                startcol=0,
+                index=True,
+            )
+        else:
+            total_summ_df.loc["Total", :] = total_summ_df.loc[:, "fatal":].sum(axis=0)
+            total_summ_df.to_excel(
+                xlsx_writer,
+                sheet_name="Crash Summary",
+                startrow=len(d0_summary) + 3,
+                startcol=0,
+                index=True,
+            )
 
     # TODO generate analysis summary for direction 1
 
