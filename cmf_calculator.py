@@ -202,44 +202,44 @@ def main():
             row_d0 = {}
             row_d1 = {}
 
-            row["year"] = year
-            row_d0["year"] = year
+            row["Year"] = year
+            row_d0["Year"] = year
             if len(crash_directions) > 1:
-                row_d1["year"] = year
+                row_d1["Year"] = year
 
-            row["logmile_dir"] = "ALL"
-            row_d0["logmile_dir"] = crash_directions[0]
+            row["Direction"] = "ALL"
+            row_d0["Direction"] = crash_directions[0]
             if len(crash_directions) > 1:
-                row_d1["logmile_dir"] = crash_directions[1]
+                row_d1["Direction"] = crash_directions[1]
 
             # count fatal in year
-            row["fatal"] = soda.count_fatal_crashes(crashes, year)
+            row["Fatal"] = soda.count_fatal_crashes(crashes, year)
             # count fatal in year for each direction
-            row_d0["fatal"] = soda.count_fatal_crashes(
+            row_d0["Fatal"] = soda.count_fatal_crashes(
                 crashes, year, crash_directions[0]
             )
             if len(crash_directions) > 1:
-                row_d1["fatal"] = soda.count_fatal_crashes(
+                row_d1["Fatal"] = soda.count_fatal_crashes(
                     crashes, year, crash_directions[1]
                 )
 
             # count injury in year
-            row["injury"] = soda.count_injuries(crashes, year)
+            row["Injury"] = soda.count_injuries(crashes, year)
             # count injury in year for each direction
-            row_d0["injury"] = soda.count_injuries(crashes, year, crash_directions[0])
+            row_d0["Injury"] = soda.count_injuries(crashes, year, crash_directions[0])
             if len(crash_directions) > 1:
-                row_d1["injury"] = soda.count_injuries(
+                row_d1["Injury"] = soda.count_injuries(
                     crashes, year, crash_directions[1]
                 )
 
             # count property damage in year
-            row["property damage"] = soda.count_property_damage(crashes, year)
+            row["Property Damage"] = soda.count_property_damage(crashes, year)
             # count property damage in year for each direction
-            row_d0["property damage"] = soda.count_property_damage(
+            row_d0["Property Damage"] = soda.count_property_damage(
                 crashes, year, crash_directions[0]
             )
             if len(crash_directions) > 1:
-                row_d1["property damage"] = soda.count_property_damage(
+                row_d1["Property Damage"] = soda.count_property_damage(
                     crashes, year, crash_directions[1]
                 )
 
@@ -269,13 +269,13 @@ def main():
         raw_crashes_df = pd.DataFrame(crashes)
 
         # write crash summary report
-        d0_summ_df.loc["Total", :] = d0_summ_df.loc[:, "fatal":].sum(axis=0)
+        d0_summ_df.loc["Total", :] = d0_summ_df.loc[:, "Fatal":].sum(axis=0)
         d0_summ_df.to_excel(
             xlsx_writer, sheet_name="Crash Summary", startrow=0, startcol=0, index=True
         )
 
         if not d1_summ_df.empty:
-            d1_summ_df.loc["Total", :] = d1_summ_df.loc[:, "fatal":].sum(axis=0)
+            d1_summ_df.loc["Total", :] = d1_summ_df.loc[:, "Fatal":].sum(axis=0)
             d1_summ_df.to_excel(
                 xlsx_writer,
                 sheet_name="Crash Summary",
@@ -283,7 +283,7 @@ def main():
                 startcol=0,
                 index=True,
             )
-            total_summ_df.loc["Total", :] = total_summ_df.loc[:, "fatal":].sum(axis=0)
+            total_summ_df.loc["Total", :] = total_summ_df.loc[:, "Fatal":].sum(axis=0)
             total_summ_df.to_excel(
                 xlsx_writer,
                 sheet_name="Crash Summary",
@@ -292,7 +292,7 @@ def main():
                 index=True,
             )
         else:
-            total_summ_df.loc["Total", :] = total_summ_df.loc[:, "fatal":].sum(axis=0)
+            total_summ_df.loc["Total", :] = total_summ_df.loc[:, "Fatal":].sum(axis=0)
             total_summ_df.to_excel(
                 xlsx_writer,
                 sheet_name="Crash Summary",
