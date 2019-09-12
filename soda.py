@@ -2,6 +2,7 @@
 
 import requests
 import re
+from pandas import DataFrame
 
 
 def fetch_crash_reports(
@@ -207,3 +208,263 @@ def count_collision_type(
     elif year is not None:
         return collision_type_count_year
     return collision_type_count
+
+
+def calculate_total_reduction(crashes_df: DataFrame, direction: str = None) -> dict:
+    """
+    Calculates total CMF and CRF values for all crashes in crashes_df.
+    Returns a dict.
+    Keyword Arguments:
+        crashes_df (REQUIRED) - Pandas dataframe of crash data. MUST contain a 'calculated_cmf' column.
+        direction (OPTIONAL) - Limit calculation to only crashes in this direction.
+    """
+    res = {}
+
+    if direction is None:
+        crash_data = crashes_df
+    else:
+        crash_data = crashes_df[crashes_df.logmile_dir_flag == direction]
+
+    res["NUMBER OF ACCIDENTS"] = crash_data.shape[0]
+
+    cmf_total = crash_data.loc[:, "calculated_cmf"].sum() / crash_data.shape[0]
+    res["CRASH MODIFICATION FACTOR (CMF)"] = cmf_total
+
+    crf_total = (1 - cmf_total) * 100
+    res["CRASH REDUCTION FACTOR (CRF)"] = crf_total
+
+    res["EXPECTED CHANGE IN ACCIDENTS (%)"] = cmf_total - 1
+
+    res["ANNUAL NET CRASH REDUCTION"] = (
+        (1 - cmf_total)
+        * crash_data.shape[0]
+        / (
+            1
+            + int(crash_data.loc[:, "year"].max())
+            - int(crash_data.loc[:, "year"].min())
+        )
+    )
+
+    return res
+
+
+def calculate_fatal_reduction(crashes_df: DataFrame, direction: str = None) -> dict:
+    """
+    Calculates total CMF and CRF values for fatal crashes in crashes_df.
+    Returns a dict.
+    Keyword Arguments:
+        crashes_df (REQUIRED) - Pandas dataframe of crash data. MUST contain a 'calculated_cmf' column.
+        direction (OPTIONAL) - Limit calculation to only crashes in this direction.
+    """
+    res = {}
+
+    if direction is None:
+        crash_data = crashes_df[crashes_df.report_type == "Fatal Crash"]
+    else:
+        crash_data = crashes_df[crashes_df.report_type == "Fatal Crash"][
+            crashes_df.logmile_dir_flag == direction
+        ]
+
+    if not crash_data.empty:
+        res["NUMBER OF ACCIDENTS"] = crash_data.shape[0]
+
+        cmf_total = crash_data.loc[:, "calculated_cmf"].sum() / float(
+            crash_data.shape[0]
+        )
+        res["CRASH MODIFICATION FACTOR (CMF)"] = cmf_total
+
+        crf_total = (1 - cmf_total) * 100
+        res["CRASH REDUCTION FACTOR (CRF)"] = crf_total
+
+        res["EXPECTED CHANGE IN ACCIDENTS (%)"] = cmf_total - 1
+
+        res["ANNUAL NET CRASH REDUCTION"] = (
+            (1 - cmf_total)
+            * crash_data.shape[0]
+            / (
+                1
+                + int(crash_data.loc[:, "year"].max())
+                - int(crash_data.loc[:, "year"].min())
+            )
+        )
+    else:
+        for i in [
+            "NUMBER OF ACCIDENTS",
+            "CRASH MODIFICATION FACTOR (CMF)",
+            "CRASH REDUCTION FACTOR (CRF)",
+            "EXPECTED CHANGE IN ACCIDENTS (%)",
+            "ANNUAL NET CRASH REDUCTION",
+        ]:
+            res[i] = 0
+    return res
+
+
+def calculate_injury_reduction(crashes_df: DataFrame, direction: str = None) -> dict:
+    """
+    Calculates total CMF and CRF values for injury crashes in crashes_df.
+    Returns a dict.
+    Keyword Arguments:
+        crashes_df (REQUIRED) - Pandas dataframe of crash data. MUST contain a 'calculated_cmf' column.
+        direction (OPTIONAL) - Limit calculation to only crashes in this direction.
+    """
+    res = {}
+
+    if direction is None:
+        crash_data = crashes_df[crashes_df.report_type == "Injury Crash"]
+    else:
+        crash_data = crashes_df[crashes_df.report_type == "Injury Crash"][
+            crashes_df.logmile_dir_flag == direction
+        ]
+    if not crash_data.empty:
+        res["NUMBER OF ACCIDENTS"] = crash_data.shape[0]
+
+        cmf_total = crash_data.loc[:, "calculated_cmf"].sum() / crash_data.shape[0]
+        res["CRASH MODIFICATION FACTOR (CMF)"] = cmf_total
+
+        crf_total = (1 - cmf_total) * 100
+        res["CRASH REDUCTION FACTOR (CRF)"] = crf_total
+
+        res["EXPECTED CHANGE IN ACCIDENTS (%)"] = cmf_total - 1
+
+        res["ANNUAL NET CRASH REDUCTION"] = (
+            (1 - cmf_total)
+            * crash_data.shape[0]
+            / (
+                1
+                + int(crash_data.loc[:, "year"].max())
+                - int(crash_data.loc[:, "year"].min())
+            )
+        )
+    else:
+        for i in [
+            "NUMBER OF ACCIDENTS",
+            "CRASH MODIFICATION FACTOR (CMF)",
+            "CRASH REDUCTION FACTOR (CRF)",
+            "EXPECTED CHANGE IN ACCIDENTS (%)",
+            "ANNUAL NET CRASH REDUCTION",
+        ]:
+            res[i] = 0
+    return res
+
+
+def calculate_prop_damage_reduction(
+    crashes_df: DataFrame, direction: str = None
+) -> dict:
+    """
+    Calculates total CMF and CRF values for property damage crashes in crashes_df.
+    Returns a dict.
+    Keyword Arguments:
+        crashes_df (REQUIRED) - Pandas dataframe of crash data. MUST contain a 'calculated_cmf' column.
+        direction (OPTIONAL) - Limit calculation to only crashes in this direction.
+    """
+    res = {}
+
+    if direction is None:
+        crash_data = crashes_df[crashes_df.report_type == "Property Damage Crash"]
+    else:
+        crash_data = crashes_df[crashes_df.report_type == "Property Damage Crash"][
+            crashes_df.logmile_dir_flag == direction
+        ]
+
+    if not crash_data.empty:
+        res["NUMBER OF ACCIDENTS"] = crash_data.shape[0]
+
+        cmf_total = crash_data.loc[:, "calculated_cmf"].sum() / crash_data.shape[0]
+        res["CRASH MODIFICATION FACTOR (CMF)"] = cmf_total
+
+        crf_total = (1 - cmf_total) * 100
+        res["CRASH REDUCTION FACTOR (CRF)"] = crf_total
+
+        res["EXPECTED CHANGE IN ACCIDENTS (%)"] = cmf_total - 1
+
+        res["ANNUAL NET CRASH REDUCTION"] = (
+            (1 - cmf_total)
+            * crash_data.shape[0]
+            / (
+                1
+                + int(crash_data.loc[:, "year"].max())
+                - int(crash_data.loc[:, "year"].min())
+            )
+        )
+    else:
+        for i in [
+            "NUMBER OF ACCIDENTS",
+            "CRASH MODIFICATION FACTOR (CMF)",
+            "CRASH REDUCTION FACTOR (CRF)",
+            "EXPECTED CHANGE IN ACCIDENTS (%)",
+            "ANNUAL NET CRASH REDUCTION",
+        ]:
+            res[i] = 0
+    return res
+
+
+def calculate_collision_type_reduction(
+    crashes_df: DataFrame, collision_type: str, direction: str = None
+) -> dict:
+    """
+    Calculates total CMF and CRF values for collision_type crashes in crashes_df.
+    Returns a dict.
+    Keyword Arguments:
+        crashes_df (REQUIRED) - Pandas dataframe of crash data. MUST contain a 'calculated_cmf' column.
+        collision_type (REQUIRED) - The collision type property of the crash. Must be one of:
+            Not Applicable
+            Head On
+            Head On Left Turn
+            Same Direction Rear End
+            Same Direction Rear End Right Turn
+            Same Direction Rear End Left Turn
+            Opposite Direction Sideswipe
+            Same Direction Sideswipe
+            Same Direction Right Turn
+            Same Direction Left Turn
+            Same Direction Both Left Turn
+            Same Movement Angle
+            Angle Meets Right Turn
+            Angle Meets Left Turn
+            Angle Meets Left Turn Head On
+            Opposite Direction Both Left Turn
+            Single Vehicle
+            Other
+            Unknown
+        direction (OPTIONAL) - Limit calculation to only crashes in this direction.
+    """
+    res = {}
+
+    if direction is None:
+        crash_data = crashes_df[crashes_df.collision_type_desc == collision_type]
+    else:
+        crash_data = crashes_df[crashes_df.collision_type_desc == collision_type][
+            crashes_df.logmile_dir_flag == direction
+        ]
+
+    if not crash_data.empty:
+        res["NUMBER OF ACCIDENTS"] = crash_data.shape[0]
+
+        cmf_total = crash_data.loc[:, "calculated_cmf"].sum() / crash_data.shape[0]
+        res["CRASH MODIFICATION FACTOR (CMF)"] = cmf_total
+
+        crf_total = (1 - cmf_total) * 100
+        res["CRASH REDUCTION FACTOR (CRF)"] = crf_total
+
+        res["EXPECTED CHANGE IN ACCIDENTS (%)"] = cmf_total - 1
+
+        res["ANNUAL NET CRASH REDUCTION"] = (
+            (1 - cmf_total)
+            * crash_data.shape[0]
+            / (
+                1
+                + int(crash_data.loc[:, "year"].max())
+                - int(crash_data.loc[:, "year"].min())
+            )
+        )
+    else:
+        for i in [
+            "NUMBER OF ACCIDENTS",
+            "CRASH MODIFICATION FACTOR (CMF)",
+            "CRASH REDUCTION FACTOR (CRF)",
+            "EXPECTED CHANGE IN ACCIDENTS (%)",
+            "ANNUAL NET CRASH REDUCTION",
+        ]:
+            res[i] = 0
+
+    return res

@@ -18,7 +18,7 @@ def main():
         "Data Source Settings", gooey_options={"columns": 1}
     )
     output_settings_grp = parser.add_argument_group(
-        "Optional Outputs", gooey_options={"columns": 2}
+        "Optional Outputs", gooey_options={"columns": 3}
     )
 
     # study related args
@@ -160,6 +160,9 @@ def main():
         args.end_year,
     )
 
+    crash_types = soda.get_crash_types(crashes)
+    crash_directions = soda.get_crash_directions(crashes)
+
     # define output reports to Excel
     # the output report will be saved to the same location as the input Excel file containing CMF values defined for this study
     out_dir = os.path.split(args.input_cmf)[0]
@@ -179,20 +182,18 @@ def main():
         )
         crash["calculated_cmf"] = study.reduce_cmfs(crash_cmfs)
 
+    crashes_df = pd.DataFrame(crashes)
+
     # write input cmf definitions
     if args.include_input_cmfs:
         study.input_cmfs.to_excel(xlsx_writer, sheet_name="Input CMFs", index=False)
 
     # write raw crash data
     if args.include_crash_data:
-        crashes_df = pd.DataFrame(crashes)
         crashes_df.to_excel(xlsx_writer, sheet_name="Crash Data", index=False)
 
     # generate the crash summary report
     if args.include_crash_summary:
-        crash_types = soda.get_crash_types(crashes)
-        crash_directions = soda.get_crash_directions(crashes)
-
         d0_summary = []
         d1_summary = []
         total_summary = []
@@ -264,10 +265,6 @@ def main():
         d1_summ_df = pd.DataFrame(d1_summary)
         total_summ_df = pd.DataFrame(total_summary)
 
-        # convert soda list object to pandas dataframe
-        # do this step last so that we can simply write the dataframe to output Excel file.
-        raw_crashes_df = pd.DataFrame(crashes)
-
         # write crash summary report
         d0_summ_df.loc["Total", :] = d0_summ_df.loc[:, "Fatal":].sum(axis=0)
         d0_summ_df.to_excel(
@@ -301,11 +298,117 @@ def main():
                 index=True,
             )
 
-    # TODO generate analysis summary for direction 1
+    idx = [
+        "NUMBER OF ACCIDENTS",
+        "CRASH MODIFICATION FACTOR (CMF)",
+        "CRASH REDUCTION FACTOR (CRF)",
+        "EXPECTED CHANGE IN ACCIDENTS (%)",
+        "ANNUAL NET CRASH REDUCTION",
+    ]
 
-    # TODO generate analysis summary for direction 2
+    cols = ["Total", "Fatal", "Injury", "Property Damage"]
+    cols.extend(crash_types)
 
-    # TODO generate analysis summary for both directions
+    # CMF Formula: sum of all CMFs / number of rows
+    # CRF Formula: (1 - CMF) * 100
+    # Expected Change Formula: CMF - 1
+    # Annual Net Reduction Formula: CRF * Number of crashes / Number of years in dataset
+
+    # generate analysis summary for both directions
+    total_change_df = pd.DataFrame(index=idx, columns=cols)
+
+    for col in cols:
+        if col == "Total":
+            res_total = soda.calculate_total_reduction(crashes_df)
+        elif col == "Fatal":
+            res_total = soda.calculate_fatal_reduction(crashes_df)
+        elif col == "Injury":
+            res_total = soda.calculate_injury_reduction(crashes_df)
+        elif col == "Property Damage":
+            res_total = soda.calculate_prop_damage_reduction(crashes_df)
+        else:
+            res_total = soda.calculate_collision_type_reduction(crashes_df, col)
+
+        total_change_df.loc["NUMBER OF ACCIDENTS", col] = res_total[
+            "NUMBER OF ACCIDENTS"
+        ]
+        total_change_df.loc["CRASH MODIFICATION FACTOR (CMF)", col] = res_total[
+            "CRASH MODIFICATION FACTOR (CMF)"
+        ]
+        total_change_df.loc["CRASH REDUCTION FACTOR (CRF)", col] = res_total[
+            "CRASH REDUCTION FACTOR (CRF)"
+        ]
+        total_change_df.loc["EXPECTED CHANGE IN ACCIDENTS (%)", col] = res_total[
+            "EXPECTED CHANGE IN ACCIDENTS (%)"
+        ]
+        total_change_df.loc["ANNUAL NET CRASH REDUCTION", col] = res_total[
+            "ANNUAL NET CRASH REDUCTION"
+        ]
+
+    total_change_df.to_excel(xlsx_writer, "Results", startrow=1)
+
+    # generate analysis summary for direction 1
+    d0_change_df = pd.DataFrame(index=idx, columns=cols)
+    d0_crashes_df = crashes_df[crashes_df.logmile_dir_flag == crash_directions[0]]
+    for col in cols:
+        if col == "Total":
+            res_total = soda.calculate_total_reduction(crashes_df)
+        elif col == "Fatal":
+            res_total = soda.calculate_fatal_reduction(crashes_df)
+        elif col == "Injury":
+            res_total = soda.calculate_injury_reduction(crashes_df)
+        elif col == "Property Damage":
+            res_total = soda.calculate_prop_damage_reduction(crashes_df)
+        else:
+            res_total = soda.calculate_collision_type_reduction(crashes_df, col)
+
+        d0_change_df.loc["NUMBER OF ACCIDENTS", col] = res_total["NUMBER OF ACCIDENTS"]
+        d0_change_df.loc["CRASH MODIFICATION FACTOR (CMF)", col] = res_total[
+            "CRASH MODIFICATION FACTOR (CMF)"
+        ]
+        d0_change_df.loc["CRASH REDUCTION FACTOR (CRF)", col] = res_total[
+            "CRASH REDUCTION FACTOR (CRF)"
+        ]
+        d0_change_df.loc["EXPECTED CHANGE IN ACCIDENTS (%)", col] = res_total[
+            "EXPECTED CHANGE IN ACCIDENTS (%)"
+        ]
+        d0_change_df.loc["ANNUAL NET CRASH REDUCTION", col] = res_total[
+            "ANNUAL NET CRASH REDUCTION"
+        ]
+
+    d0_change_df.to_excel(xlsx_writer, "Results", startrow=9)
+
+    # generate analysis summary for direction 2
+    if len(crash_directions) > 1:
+        d1_change_df = pd.DataFrame(index=idx, columns=cols,)
+        d1_crashes_df = crashes_df[crashes_df.logmile_dir_flag == crash_directions[1]]
+        for col in cols:
+            if col == "Total":
+                res_total = soda.calculate_total_reduction(crashes_df)
+            elif col == "Fatal":
+                res_total = soda.calculate_fatal_reduction(crashes_df)
+            elif col == "Injury":
+                res_total = soda.calculate_injury_reduction(crashes_df)
+            elif col == "Property Damage":
+                res_total = soda.calculate_prop_damage_reduction(crashes_df)
+            else:
+                res_total = soda.calculate_collision_type_reduction(crashes_df, col)
+
+            d1_change_df.loc["NUMBER OF ACCIDENTS", col] = res_total["NUMBER OF ACCIDENTS"]
+            d1_change_df.loc["CRASH MODIFICATION FACTOR (CMF)", col] = res_total[
+                "CRASH MODIFICATION FACTOR (CMF)"
+            ]
+            d1_change_df.loc["CRASH REDUCTION FACTOR (CRF)", col] = res_total[
+                "CRASH REDUCTION FACTOR (CRF)"
+            ]
+            d1_change_df.loc["EXPECTED CHANGE IN ACCIDENTS (%)", col] = res_total[
+                "EXPECTED CHANGE IN ACCIDENTS (%)"
+            ]
+            d1_change_df.loc["ANNUAL NET CRASH REDUCTION", col] = res_total[
+                "ANNUAL NET CRASH REDUCTION"
+            ]
+
+        d1_change_df.to_excel(xlsx_writer, "Results", startrow=17)
 
     # save output excel file
     xlsx_writer.save()
