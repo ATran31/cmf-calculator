@@ -184,6 +184,14 @@ def main():
 
     crashes_df = pd.DataFrame(crashes)
 
+    # lookup for logmile_dir_flag to full name for use in output report tables
+    route_dirs = {
+        "N": "Northbound",
+        "S": "Southbound",
+        "E": "Eastbound",
+        "W": "Westbound",
+    }
+
     # write input cmf definitions
     if args.include_input_cmfs:
         study.input_cmfs.to_excel(xlsx_writer, sheet_name="Input CMFs", index=False)
@@ -194,108 +202,103 @@ def main():
 
     # generate the crash summary report
     if args.include_crash_summary:
-        d0_summary = []
-        d1_summary = []
-        total_summary = []
+
+        common_header = ["Fatal", "Injury", "Property Damage"]
+        common_header.extend(crash_types)
+
+        # define dataframes
+        total_summ_df = pd.DataFrame(
+            index=[year for year in range(args.start_year, args.end_year + 1)],
+            columns=[["Total"] * (3 + len(crash_types)), common_header],
+        )
+        d0_top_header = [route_dirs.get(crash_directions[0])] * (3 + len(crash_types))
+        d0_summ_df = pd.DataFrame(
+            index=[year for year in range(args.start_year, args.end_year + 1)],
+            columns=[d0_top_header, common_header],
+        )
+        if len(crash_directions) > 1:
+            d1_top_header = [route_dirs.get(crash_directions[1])] * (
+                3 + len(crash_types)
+            )
+            d1_summ_df = pd.DataFrame(
+                index=[year for year in range(args.start_year, args.end_year + 1)],
+                columns=[d1_top_header, common_header],
+            )
 
         for year in range(args.start_year, args.end_year + 1):
-            row = {}
-            row_d0 = {}
-            row_d1 = {}
-
-            row["Year"] = year
-            row_d0["Year"] = year
-            if len(crash_directions) > 1:
-                row_d1["Year"] = year
-
-            row["Direction"] = "ALL"
-            row_d0["Direction"] = crash_directions[0]
-            if len(crash_directions) > 1:
-                row_d1["Direction"] = crash_directions[1]
-
             # count fatal in year
-            row["Fatal"] = soda.count_fatal_crashes(crashes, year)
+            total_summ_df.loc[year, "Total"]["Fatal"] = soda.count_fatal_crashes(
+                crashes, year
+            )
             # count fatal in year for each direction
-            row_d0["Fatal"] = soda.count_fatal_crashes(
-                crashes, year, crash_directions[0]
-            )
-            if len(crash_directions) > 1:
-                row_d1["Fatal"] = soda.count_fatal_crashes(
-                    crashes, year, crash_directions[1]
-                )
-
+            d0_summ_df.loc[year, route_dirs.get(crash_directions[0])][
+                "Fatal"
+            ] = soda.count_fatal_crashes(crashes, year, crash_directions[0])
             # count injury in year
-            row["Injury"] = soda.count_injuries(crashes, year)
-            # count injury in year for each direction
-            row_d0["Injury"] = soda.count_injuries(crashes, year, crash_directions[0])
-            if len(crash_directions) > 1:
-                row_d1["Injury"] = soda.count_injuries(
-                    crashes, year, crash_directions[1]
-                )
-
-            # count property damage in year
-            row["Property Damage"] = soda.count_property_damage(crashes, year)
-            # count property damage in year for each direction
-            row_d0["Property Damage"] = soda.count_property_damage(
-                crashes, year, crash_directions[0]
+            total_summ_df.loc[year, "Total"]["Injury"] = soda.count_injuries(
+                crashes, year
             )
-            if len(crash_directions) > 1:
-                row_d1["Property Damage"] = soda.count_property_damage(
-                    crashes, year, crash_directions[1]
-                )
-
+            # count injury in year for each direction
+            d0_summ_df.loc[year, route_dirs.get(crash_directions[0])][
+                "Injury"
+            ] = soda.count_injuries(crashes, year, crash_directions[0])
+            # count property damage in year
+            total_summ_df.loc[year, "Total"][
+                "Property Damage"
+            ] = soda.count_property_damage(crashes, year)
+            # count property damage in year for each direction
+            d0_summ_df.loc[year, route_dirs.get(crash_directions[0])][
+                "Property Damage"
+            ] = soda.count_property_damage(crashes, year, crash_directions[0])
             for crash_type in crash_types:
                 # count specific crash types in year
-                row[crash_type] = soda.count_collision_type(crashes, crash_type, year)
+                total_summ_df.loc[year, "Total"][
+                    crash_type
+                ] = soda.count_collision_type(crashes, crash_type, year)
                 # count specific crash types in each direction
-                row_d0[crash_type] = soda.count_collision_type(
+                d0_summ_df.loc[year, route_dirs.get(crash_directions[0])][
+                    crash_type
+                ] = soda.count_collision_type(
                     crashes, crash_type, year, crash_directions[0]
                 )
-                if len(crash_directions) > 1:
-                    row_d1[crash_type] = soda.count_collision_type(
+
+            if len(crash_directions) > 1:
+                d1_summ_df.loc[year, route_dirs.get(crash_directions[1])][
+                    "Fatal"
+                ] = soda.count_fatal_crashes(crashes, year, crash_directions[1])
+                d1_summ_df.loc[year, route_dirs.get(crash_directions[1])][
+                    "Injury"
+                ] = soda.count_injuries(crashes, year, crash_directions[1])
+                d1_summ_df.loc[year, route_dirs.get(crash_directions[1])][
+                    "Property Damage"
+                ] = soda.count_property_damage(crashes, year, crash_directions[1])
+                for crash_type in crash_types:
+                    d1_summ_df.loc[year, route_dirs.get(crash_directions[1])][
+                        crash_type
+                    ] = soda.count_collision_type(
                         crashes, crash_type, year, crash_directions[1]
                     )
 
-            d0_summary.append(row_d0)
-            if row_d1:
-                d1_summary.append(row_d1)
-            total_summary.append(row)
-
-        d0_summ_df = pd.DataFrame(d0_summary)
-        d1_summ_df = pd.DataFrame(d1_summary)
-        total_summ_df = pd.DataFrame(total_summary)
-
         # write crash summary report
-        d0_summ_df.loc["Total", :] = d0_summ_df.loc[:, "Fatal":].sum(axis=0)
+        total_summ_df.loc["Total", :] = total_summ_df.sum(axis=0)
+        total_summ_df.to_excel(
+            xlsx_writer, sheet_name="Crash Summary", startrow=0, startcol=0
+        )
+        d0_summ_df.loc["Total", :] = d0_summ_df.sum(axis=0)
         d0_summ_df.to_excel(
-            xlsx_writer, sheet_name="Crash Summary", startrow=0, startcol=0, index=True
+            xlsx_writer,
+            sheet_name="Crash Summary",
+            startrow=len(total_summ_df) + 4,
+            startcol=0,
         )
 
-        if not d1_summ_df.empty:
-            d1_summ_df.loc["Total", :] = d1_summ_df.loc[:, "Fatal":].sum(axis=0)
+        if len(crash_directions) > 1:
+            d1_summ_df.loc["Total", :] = d1_summ_df.sum(axis=0)
             d1_summ_df.to_excel(
                 xlsx_writer,
                 sheet_name="Crash Summary",
-                startrow=len(d0_summary) + 3,
+                startrow=(len(d0_summ_df) + 4) * 2,
                 startcol=0,
-                index=True,
-            )
-            total_summ_df.loc["Total", :] = total_summ_df.loc[:, "Fatal":].sum(axis=0)
-            total_summ_df.to_excel(
-                xlsx_writer,
-                sheet_name="Crash Summary",
-                startrow=(len(d0_summary) + 3) * 2,
-                startcol=0,
-                index=True,
-            )
-        else:
-            total_summ_df.loc["Total", :] = total_summ_df.loc[:, "Fatal":].sum(axis=0)
-            total_summ_df.to_excel(
-                xlsx_writer,
-                sheet_name="Crash Summary",
-                startrow=len(d0_summary) + 3,
-                startcol=0,
-                index=True,
             )
 
     idx = [
@@ -315,7 +318,8 @@ def main():
     # Annual Net Reduction Formula: CRF * Number of crashes / Number of years in dataset
 
     # generate analysis summary for both directions
-    total_change_df = pd.DataFrame(index=idx, columns=cols)
+    total_header = [["TOTAL"] * len(cols), cols]
+    total_change_df = pd.DataFrame(index=idx, columns=total_header)
 
     for col in cols:
         if col == "Total":
@@ -329,26 +333,27 @@ def main():
         else:
             res_total = soda.calculate_collision_type_reduction(crashes_df, col)
 
-        total_change_df.loc["NUMBER OF ACCIDENTS", col] = res_total[
+        total_change_df.loc["NUMBER OF ACCIDENTS", "TOTAL"][col] = res_total[
             "NUMBER OF ACCIDENTS"
         ]
-        total_change_df.loc["CRASH MODIFICATION FACTOR (CMF)", col] = res_total[
-            "CRASH MODIFICATION FACTOR (CMF)"
-        ]
-        total_change_df.loc["CRASH REDUCTION FACTOR (CRF)", col] = res_total[
+        total_change_df.loc["CRASH MODIFICATION FACTOR (CMF)", "TOTAL"][
+            col
+        ] = res_total["CRASH MODIFICATION FACTOR (CMF)"]
+        total_change_df.loc["CRASH REDUCTION FACTOR (CRF)", "TOTAL"][col] = res_total[
             "CRASH REDUCTION FACTOR (CRF)"
         ]
-        total_change_df.loc["EXPECTED CHANGE IN ACCIDENTS (%)", col] = res_total[
-            "EXPECTED CHANGE IN ACCIDENTS (%)"
-        ]
-        total_change_df.loc["ANNUAL NET CRASH REDUCTION", col] = res_total[
+        total_change_df.loc["EXPECTED CHANGE IN ACCIDENTS (%)", "TOTAL"][
+            col
+        ] = res_total["EXPECTED CHANGE IN ACCIDENTS (%)"]
+        total_change_df.loc["ANNUAL NET CRASH REDUCTION", "TOTAL"][col] = res_total[
             "ANNUAL NET CRASH REDUCTION"
         ]
 
-    total_change_df.to_excel(xlsx_writer, "Results", startrow=1)
+    total_change_df.to_excel(xlsx_writer, "Results")
 
     # generate analysis summary for direction 1
-    d0_change_df = pd.DataFrame(index=idx, columns=cols)
+    d0_header = [[route_dirs.get(crash_directions[0])] * len(cols), cols]
+    d0_change_df = pd.DataFrame(index=idx, columns=d0_header)
     d0_crashes_df = crashes_df[crashes_df.logmile_dir_flag == crash_directions[0]]
     for col in cols:
         if col == "Total":
@@ -362,17 +367,17 @@ def main():
         else:
             res_total = soda.calculate_collision_type_reduction(crashes_df, col)
 
-        d0_change_df.loc["NUMBER OF ACCIDENTS", col] = res_total["NUMBER OF ACCIDENTS"]
-        d0_change_df.loc["CRASH MODIFICATION FACTOR (CMF)", col] = res_total[
+        d0_change_df.loc["NUMBER OF ACCIDENTS", route_dirs.get(crash_directions[0])][col] = res_total["NUMBER OF ACCIDENTS"]
+        d0_change_df.loc["CRASH MODIFICATION FACTOR (CMF)", route_dirs.get(crash_directions[0])][col] = res_total[
             "CRASH MODIFICATION FACTOR (CMF)"
         ]
-        d0_change_df.loc["CRASH REDUCTION FACTOR (CRF)", col] = res_total[
+        d0_change_df.loc["CRASH REDUCTION FACTOR (CRF)", route_dirs.get(crash_directions[0])][col] = res_total[
             "CRASH REDUCTION FACTOR (CRF)"
         ]
-        d0_change_df.loc["EXPECTED CHANGE IN ACCIDENTS (%)", col] = res_total[
+        d0_change_df.loc["EXPECTED CHANGE IN ACCIDENTS (%)", route_dirs.get(crash_directions[0])][col] = res_total[
             "EXPECTED CHANGE IN ACCIDENTS (%)"
         ]
-        d0_change_df.loc["ANNUAL NET CRASH REDUCTION", col] = res_total[
+        d0_change_df.loc["ANNUAL NET CRASH REDUCTION", route_dirs.get(crash_directions[0])][col] = res_total[
             "ANNUAL NET CRASH REDUCTION"
         ]
 
@@ -380,7 +385,8 @@ def main():
 
     # generate analysis summary for direction 2
     if len(crash_directions) > 1:
-        d1_change_df = pd.DataFrame(index=idx, columns=cols,)
+        d1_header = [[route_dirs.get(crash_directions[1])] * len(cols), cols]
+        d1_change_df = pd.DataFrame(index=idx, columns=d1_header)
         d1_crashes_df = crashes_df[crashes_df.logmile_dir_flag == crash_directions[1]]
         for col in cols:
             if col == "Total":
@@ -394,17 +400,19 @@ def main():
             else:
                 res_total = soda.calculate_collision_type_reduction(crashes_df, col)
 
-            d1_change_df.loc["NUMBER OF ACCIDENTS", col] = res_total["NUMBER OF ACCIDENTS"]
-            d1_change_df.loc["CRASH MODIFICATION FACTOR (CMF)", col] = res_total[
+            d1_change_df.loc["NUMBER OF ACCIDENTS", route_dirs.get(crash_directions[1])][col] = res_total[
+                "NUMBER OF ACCIDENTS"
+            ]
+            d1_change_df.loc["CRASH MODIFICATION FACTOR (CMF)", route_dirs.get(crash_directions[1])][col] = res_total[
                 "CRASH MODIFICATION FACTOR (CMF)"
             ]
-            d1_change_df.loc["CRASH REDUCTION FACTOR (CRF)", col] = res_total[
+            d1_change_df.loc["CRASH REDUCTION FACTOR (CRF)", route_dirs.get(crash_directions[1])][col] = res_total[
                 "CRASH REDUCTION FACTOR (CRF)"
             ]
-            d1_change_df.loc["EXPECTED CHANGE IN ACCIDENTS (%)", col] = res_total[
+            d1_change_df.loc["EXPECTED CHANGE IN ACCIDENTS (%)", route_dirs.get(crash_directions[1])][col] = res_total[
                 "EXPECTED CHANGE IN ACCIDENTS (%)"
             ]
-            d1_change_df.loc["ANNUAL NET CRASH REDUCTION", col] = res_total[
+            d1_change_df.loc["ANNUAL NET CRASH REDUCTION", route_dirs.get(crash_directions[1])][col] = res_total[
                 "ANNUAL NET CRASH REDUCTION"
             ]
 
