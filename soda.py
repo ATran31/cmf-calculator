@@ -36,10 +36,14 @@ def fetch_crash_reports(
     if r.status_code == 200:
         crashes = r.json()
         for crash in crashes:
-            # handle missing attributes
+            # handle missing attributes & data conversion
             for col in columns:
                 if crash.get(col) is None:
                     crash[col] = "NoData"
+                if col in ["rte_no", "year"]:
+                    crash[col] = int(crash.get(col))
+                if col == "log_mile":
+                    crash[col] = float(crash.get(col))
             # reformat crash time into hh:mm:ss format
             if ":" not in crash["acc_time"]:
                 crash[
