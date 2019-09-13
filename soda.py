@@ -35,29 +35,29 @@ def fetch_crash_reports(
     r = requests.get(query_url)
     if r.status_code == 200:
         crashes = r.json()
-        scrubbed_crashes = []
         for crash in crashes:
-            if list(crash.keys()) == columns:
-                # reformat crash time into hh:mm:ss format
-                if ":" not in crash["acc_time"]:
-                    crash[
-                        "acc_time"
-                    ] = f"{crash['acc_time'][:2]}:{crash['acc_time'][2:4]}:{crash['acc_time'][4:]}"
+            # handle missing attributes
+            for col in columns:
+                if crash.get(col) is None:
+                    crash[col] = "NoData"
+            # reformat crash time into hh:mm:ss format
+            if ":" not in crash["acc_time"]:
+                crash[
+                    "acc_time"
+                ] = f"{crash['acc_time'][:2]}:{crash['acc_time'][2:4]}:{crash['acc_time'][4:]}"
 
-                # ** date formats on SODA api is not standardized and has multiple variations **
-                # convert yyyymmdd format into yyyy-mm-dd
-                if re.match("\d{8}", crash["acc_date"]) is not None:
-                    crash[
-                        "acc_date"
-                    ] = f"{crash['acc_date'][:4]}-{crash['acc_date'][4:6]}-{crash['acc_date'][6:]}"
-                # convert mm-dd-yyyy format into yyyy-mm-dd
-                elif re.match("\d{2}-\d{2}-\d{4}", crash["acc_date"]) is not None:
-                    crash[
-                        "acc_date"
-                    ] = f"{crash['acc_date'][-4:]}-{crash['acc_date'][0:2]}-{crash['acc_date'][3:5]}"
-
-                scrubbed_crashes.append(crash)
-        return scrubbed_crashes
+            # ** date formats on SODA api is not standardized and has multiple variations **
+            # convert yyyymmdd format into yyyy-mm-dd
+            if re.match("\d{8}", crash["acc_date"]) is not None:
+                crash[
+                    "acc_date"
+                ] = f"{crash['acc_date'][:4]}-{crash['acc_date'][4:6]}-{crash['acc_date'][6:]}"
+            # convert mm-dd-yyyy format into yyyy-mm-dd
+            elif re.match("\d{2}-\d{2}-\d{4}", crash["acc_date"]) is not None:
+                crash[
+                    "acc_date"
+                ] = f"{crash['acc_date'][-4:]}-{crash['acc_date'][0:2]}-{crash['acc_date'][3:5]}"
+        return crashes
     else:
         r.raise_for_status()
 
