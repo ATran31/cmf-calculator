@@ -5,7 +5,7 @@ import soda
 from studies import Study_Area
 
 
-@Gooey(program_name="CMF Calculator", navigation="TABBED")
+@Gooey(program_name="CMF Calculator", navigation="TABBED", image_dir="./img")
 def main():
     parser = GooeyParser(
         description="Calculate Crash Modification Factor for a given segment of roadway."
@@ -139,6 +139,7 @@ def main():
     args = parser.parse_args()
 
     # define study area
+    print("Configuring study area...", flush=True)
     study = Study_Area(
         args.route_prefix,
         args.route_number,
@@ -150,6 +151,7 @@ def main():
     )
 
     # define crash reports
+    print("Fetching crash reports...", flush=True)
     crashes = soda.fetch_crash_reports(
         args.crash_data,
         args.route_prefix,
@@ -160,7 +162,10 @@ def main():
         args.end_year,
     )
 
+    print("Identifying unique crash types...", flush=True)
     crash_types = soda.get_crash_types(crashes)
+
+    print("Identifying unique crash directions...", flush=True)
     crash_directions = soda.get_crash_directions(crashes)
 
     # define output reports to Excel
@@ -172,6 +177,7 @@ def main():
     # loop through crashes and calculate total CMFs for each crash
     # calculations should be for both travel directions and the total
     # add the calculated value as a new crash attributes
+    print("Calculating individual crash CMF values...", flush=True)
     for crash in crashes:
         crash_cmfs = study.get_crash_cmfs(
             crash_milepost=crash["log_mile"],
@@ -194,14 +200,17 @@ def main():
 
     # write input cmf definitions
     if args.include_input_cmfs:
+        print("Writing study area CMF definitions...", flush=True)
         study.input_cmfs.to_excel(xlsx_writer, sheet_name="Input CMFs", index=False)
 
     # write raw crash data
     if args.include_crash_data:
+        print("Writing raw crash data...", flush=True)
         crashes_df.to_excel(xlsx_writer, sheet_name="Crash Data", index=False)
 
     # generate the crash summary report
     if args.include_crash_summary:
+        print("Calculating crash summaries...", flush=True)
 
         common_header = ["Fatal", "Injury", "Property Damage"]
         common_header.extend(crash_types)
@@ -280,6 +289,7 @@ def main():
                     )
 
         # write crash summary report
+        print("Writing crash summaries...", flush=True)
         total_summ_df.loc["Total", :] = total_summ_df.sum(axis=0)
         total_summ_df.to_excel(
             xlsx_writer, sheet_name="Crash Summary", startrow=0, startcol=0
@@ -301,6 +311,7 @@ def main():
                 startcol=0,
             )
 
+    print("Analyzing crashes...", flush=True)
     idx = [
         "NUMBER OF ACCIDENTS",
         "CRASH MODIFICATION FACTOR (CMF)",
@@ -349,8 +360,6 @@ def main():
             "ANNUAL NET CRASH REDUCTION"
         ]
 
-    total_change_df.to_excel(xlsx_writer, "Results")
-
     # generate analysis summary for direction 1
     d0_header = [[route_dirs.get(crash_directions[0])] * len(cols), cols]
     d0_change_df = pd.DataFrame(index=idx, columns=d0_header)
@@ -381,6 +390,8 @@ def main():
             "ANNUAL NET CRASH REDUCTION"
         ]
 
+    print("Writing analyis results...", flush=True)
+    total_change_df.to_excel(xlsx_writer, "Results")
     d0_change_df.to_excel(xlsx_writer, "Results", startrow=9)
 
     # generate analysis summary for direction 2
