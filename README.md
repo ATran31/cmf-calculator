@@ -4,9 +4,11 @@ CMF Calculator is a desktop application used to perform crash modification facto
 ![Image of CMFcalc](./img/cmf_calc.png)
 
 # Inputs
-In order to run the analyis an input Excel file that defines CMF values that apply to the particular road segment is required.
+In order to run the analyis, an input Excel file that defines CMF values for the particular road segment is required.
 
-The file can contain any number columns but the following fields are **REQUIRED**.
+**This information should be on the FIRST worksheet in your Excel file!**
+
+The worksheet can contain any number of columns in any order. However, the following fields are **REQUIRED**.
 
 | Severity | Crash_Type | Start_MP | End_MP | CMF | Direction | Time |
 | --- | --- | --- | --- | --- | --- | --- |
