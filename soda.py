@@ -12,7 +12,25 @@ def infer_report_type(report_no: str, fix_obj_desc: str) -> str:
     """
     # Person Details API
     url = f"https://opendata.maryland.gov/resource/py4c-dicf.json?report_no={report_no}"
-    return
+    if r.status_code == 200:
+        people = r.json()
+        fatality_count = 0
+        injury_count = 0
+        for person in people:
+            # code 5 is fatal
+            if person.get("inj_sever_code") is not None and int(person.get("inj_sever_code")) == 5:
+                fatality_count += 1
+            # 1 < code < 5 is injury
+            elif person.get("inj_sever_code") is not None and 1 < int(person.get("inj_sever_code")) < 5:
+                injury_count += 1
+        if fatality_count > 0:
+            return "Fatal Crash"
+        elif injury_count > 0:
+            return "Injury Crash"
+        else:
+            return "Property Damage Crash"
+    else:
+        r.raise_for_status()
 
 def get_crash_dir(report_no: str):
     """
@@ -21,7 +39,22 @@ def get_crash_dir(report_no: str):
     """
     # Vehicle Details API
     url = f"https://opendata.maryland.gov/resource/mhft-5t5y.json?report_no={report_no}"
-    return
+    r = requests.get(url)
+    if r.status_code == 200:
+        vehicles = r.json()
+        dirs = [vehicle["going_direction_code"] for vehicle in vehicles]
+        last_max = 0
+        most_frequent_dir = None
+        for d in ["N", "S", "E", "W"]:
+            current_count = dirs.count(d)
+            if current_count > last_max:
+                last_max = current_count
+                most_frequent_dir = d
+        if most_frequent_dir is not None:
+            return most_frequent_dir
+        return "U"
+    else:
+        r.raise_for_status()
 
 def format_time_str(time_str:str) -> str:
     # reformat crash time into hh:mm:ss format
