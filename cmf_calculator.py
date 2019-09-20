@@ -190,12 +190,13 @@ def main():
 
     crashes_df = pd.DataFrame(crashes)
 
-    # lookup for logmile_dir_flag to full name for use in output report tables
+    # lookup for crash direction code to full name for use in output report tables
     route_dirs = {
         "N": "Northbound",
         "S": "Southbound",
         "E": "Eastbound",
         "W": "Westbound",
+        "U": "Unknown"
     }
 
     # write input cmf definitions
@@ -294,11 +295,12 @@ def main():
         total_summ_df.to_excel(
             xlsx_writer, sheet_name="Crash Summary", startrow=0, startcol=0
         )
+        row_size = len(total_summ_df) + 3
         d0_summ_df.loc["Total", :] = d0_summ_df.sum(axis=0)
         d0_summ_df.to_excel(
             xlsx_writer,
             sheet_name="Crash Summary",
-            startrow=len(total_summ_df) + 4,
+            startrow=row_size + 1,
             startcol=0,
         )
 
@@ -307,7 +309,7 @@ def main():
             d1_summ_df.to_excel(
                 xlsx_writer,
                 sheet_name="Crash Summary",
-                startrow=(len(d0_summ_df) + 4) * 2,
+                startrow=(row_size * 2) + 2,
                 startcol=0,
             )
 
@@ -363,18 +365,18 @@ def main():
     # generate analysis summary for direction 1
     d0_header = [[route_dirs.get(crash_directions[0])] * len(cols), cols]
     d0_change_df = pd.DataFrame(index=idx, columns=d0_header)
-    d0_crashes_df = crashes_df[crashes_df.logmile_dir_flag == crash_directions[0]]
+    d0_crashes_df = crashes_df[crashes_df.crash_dir == crash_directions[0]]
     for col in cols:
         if col == "Total":
-            res_total = soda.calculate_total_reduction(crashes_df)
+            res_total = soda.calculate_total_reduction(d0_crashes_df)
         elif col == "Fatal":
-            res_total = soda.calculate_fatal_reduction(crashes_df)
+            res_total = soda.calculate_fatal_reduction(d0_crashes_df)
         elif col == "Injury":
-            res_total = soda.calculate_injury_reduction(crashes_df)
+            res_total = soda.calculate_injury_reduction(d0_crashes_df)
         elif col == "Property Damage":
-            res_total = soda.calculate_prop_damage_reduction(crashes_df)
+            res_total = soda.calculate_prop_damage_reduction(d0_crashes_df)
         else:
-            res_total = soda.calculate_collision_type_reduction(crashes_df, col)
+            res_total = soda.calculate_collision_type_reduction(d0_crashes_df, col)
 
         d0_change_df.loc["NUMBER OF ACCIDENTS", route_dirs.get(crash_directions[0])][col] = res_total["NUMBER OF ACCIDENTS"]
         d0_change_df.loc["CRASH MODIFICATION FACTOR (CMF)", route_dirs.get(crash_directions[0])][col] = res_total[
@@ -398,18 +400,18 @@ def main():
     if len(crash_directions) > 1:
         d1_header = [[route_dirs.get(crash_directions[1])] * len(cols), cols]
         d1_change_df = pd.DataFrame(index=idx, columns=d1_header)
-        d1_crashes_df = crashes_df[crashes_df.logmile_dir_flag == crash_directions[1]]
+        d1_crashes_df = crashes_df[crashes_df.crash_dir == crash_directions[1]]
         for col in cols:
             if col == "Total":
-                res_total = soda.calculate_total_reduction(crashes_df)
+                res_total = soda.calculate_total_reduction(d1_crashes_df)
             elif col == "Fatal":
-                res_total = soda.calculate_fatal_reduction(crashes_df)
+                res_total = soda.calculate_fatal_reduction(d1_crashes_df)
             elif col == "Injury":
-                res_total = soda.calculate_injury_reduction(crashes_df)
+                res_total = soda.calculate_injury_reduction(d1_crashes_df)
             elif col == "Property Damage":
-                res_total = soda.calculate_prop_damage_reduction(crashes_df)
+                res_total = soda.calculate_prop_damage_reduction(d1_crashes_df)
             else:
-                res_total = soda.calculate_collision_type_reduction(crashes_df, col)
+                res_total = soda.calculate_collision_type_reduction(d1_crashes_df, col)
 
             d1_change_df.loc["NUMBER OF ACCIDENTS", route_dirs.get(crash_directions[1])][col] = res_total[
                 "NUMBER OF ACCIDENTS"
@@ -427,7 +429,7 @@ def main():
                 "ANNUAL NET CRASH REDUCTION"
             ]
 
-        d1_change_df.to_excel(xlsx_writer, "Results", startrow=17)
+        d1_change_df.to_excel(xlsx_writer, "Results", startrow=18)
 
     # save output excel file
     xlsx_writer.save()
