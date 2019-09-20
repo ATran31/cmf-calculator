@@ -33,6 +33,7 @@ def infer_report_type(report_no: str) -> str:
     else:
         r.raise_for_status()
 
+
 def infer_crash_dir(report_no: str, logmile_dir_flag: str) -> str:
     """
     Look at vehicle details related to report_no to determine the direction of the crash.
@@ -71,9 +72,11 @@ def infer_crash_dir(report_no: str, logmile_dir_flag: str) -> str:
     else:
         r.raise_for_status()
 
-def format_time_str(time_str:str) -> str:
+
+def format_time_str(time_str: str) -> str:
     # reformat crash time into hh:mm:ss format
     return f"{time_str[:2]}:{time_str[2:4]}:{time_str[4:]}"
+
 
 def format_date_str(date_str: str) -> str:
     # ** date formats on SODA api is not standardized and has multiple variations **
@@ -83,6 +86,7 @@ def format_date_str(date_str: str) -> str:
     # convert mm-dd-yyyy format into yyyy-mm-dd
     elif re.match("\d{2}-\d{2}-\d{4}", date_str) is not None:
         return f"{date_str[-4:]}-{date_str[0:2]}-{date_str[3:5]}"
+
 
 def fetch_crash_reports(
     url: str,
@@ -127,7 +131,7 @@ def fetch_crash_reports(
                     crash[col] = int(crash.get(col))
                 if col == "log_mile":
                     crash[col] = float(crash.get(col))
-            
+
             # standarize crash time into hh:mm:ss format
             if ":" not in crash["acc_time"]:
                 crash[
@@ -136,7 +140,7 @@ def fetch_crash_reports(
 
             # standardize crash date field into yyyy-mm-dd format
             crash["acc_date"] = format_date_str(crash["acc_date"])
-            
+
             # infer crash direction based on the direction of travel of all vehicles involved
             crash["crash_dir"] = infer_crash_dir(crash.get("report_no"), crash.get("logmile_dir_flag"))
         return crashes
