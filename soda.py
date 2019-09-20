@@ -33,7 +33,7 @@ def infer_report_type(report_no: str) -> str:
     else:
         r.raise_for_status()
 
-def get_crash_dir(report_no: str, logmile_dir_flag: str) -> str:
+def infer_crash_dir(report_no: str, logmile_dir_flag: str) -> str:
     """
     Look at vehicle details related to report_no to determine the direction of the crash.
     Returns str representing a single cardinal direction code, one of 'N', 'S', 'E', 'W' or 'U' for unknown.
@@ -44,27 +44,30 @@ def get_crash_dir(report_no: str, logmile_dir_flag: str) -> str:
     if r.status_code == 200:
         vehicles = r.json()
         dirs = [vehicle["going_direction_code"] for vehicle in vehicles]
-        last_max = 0
-        most_frequent_dir = None
-        # handle north-south crashes
-        if logmile_dir_flag in ["N", "S"]:
-            for d in ["N", "S"]:
-                current_count = dirs.count(d)
-                if current_count > last_max:
-                    last_max = current_count
-                    most_frequent_dir = d
+        if len(dirs) == 0:
+            return "NoData"
+        else:
+            last_max = 0
+            most_frequent_dir = None
+            # handle north-south crashes
+            if logmile_dir_flag in ["N", "S"]:
+                for d in ["N", "S"]:
+                    current_count = dirs.count(d)
+                    if current_count > last_max:
+                        last_max = current_count
+                        most_frequent_dir = d
 
-        # handle east-west crashes
-        elif logmile_dir_flag in ["E", "W"]:
-            for d in ["E", "W"]:
-                current_count = dirs.count(d)
-                if current_count > last_max:
-                    last_max = current_count
-                    most_frequent_dir = d
+            # handle east-west crashes
+            elif logmile_dir_flag in ["E", "W"]:
+                for d in ["E", "W"]:
+                    current_count = dirs.count(d)
+                    if current_count > last_max:
+                        last_max = current_count
+                        most_frequent_dir = d
 
-        if most_frequent_dir is not None:
-            return most_frequent_dir
-        return "U"
+            if most_frequent_dir is not None:
+                return most_frequent_dir
+            return "U"
     else:
         r.raise_for_status()
 
@@ -135,7 +138,7 @@ def fetch_crash_reports(
             crash["acc_date"] = format_date_str(crash["acc_date"])
             
             # infer crash direction based on the direction of travel of all vehicles involved
-            crash["crash_dir"] = get_crash_dir(crash.get("report_no"), crash.get("logmile_dir_flag"))
+            crash["crash_dir"] = infer_crash_dir(crash.get("report_no"), crash.get("logmile_dir_flag"))
         return crashes
     else:
         r.raise_for_status()
@@ -159,7 +162,7 @@ def get_crash_directions(crashes: list) -> tuple:
     """
     crash_dirs = []
     for crash in crashes:
-        if crash["crash_dir"] not in crash_dirs:
+        if crash["crash_dir"] not in crash_dirs and crash["crash_dir"] != "NoData":
             crash_dirs.append(crash["crash_dir"])
     crash_dirs.sort()
     return tuple(crash_dirs)
