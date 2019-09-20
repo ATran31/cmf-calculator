@@ -5,13 +5,14 @@ import re
 from pandas import DataFrame
 
 
-def infer_report_type(report_no: str, fix_obj_desc: str) -> str:
+def infer_report_type(report_no: str) -> str:
     """
     Look at all person and struck object details related to report_no and determine if there are fatalities, injuries or property damage.
     Returns str one of 'Fatal Crash', 'Injury Crash' or 'Property Damage Crash'.
     """
     # Person Details API
     url = f"https://opendata.maryland.gov/resource/py4c-dicf.json?report_no={report_no}"
+    r = requests.get(url)
     if r.status_code == 200:
         people = r.json()
         fatality_count = 0
@@ -32,7 +33,7 @@ def infer_report_type(report_no: str, fix_obj_desc: str) -> str:
     else:
         r.raise_for_status()
 
-def get_crash_dir(report_no: str):
+def get_crash_dir(report_no: str, logmile_dir_flag: str) -> str:
     """
     Look at vehicle details related to report_no to determine the direction of the crash.
     Returns str representing a single cardinal direction code, one of 'N', 'S', 'E', 'W' or 'U' for unknown.
@@ -45,11 +46,22 @@ def get_crash_dir(report_no: str):
         dirs = [vehicle["going_direction_code"] for vehicle in vehicles]
         last_max = 0
         most_frequent_dir = None
-        for d in ["N", "S", "E", "W"]:
-            current_count = dirs.count(d)
-            if current_count > last_max:
-                last_max = current_count
-                most_frequent_dir = d
+        # handle north-south crashes
+        if logmile_dir_flag in ["N", "S"]:
+            for d in ["N", "S"]:
+                current_count = dirs.count(d)
+                if current_count > last_max:
+                    last_max = current_count
+                    most_frequent_dir = d
+
+        # handle east-west crashes
+        elif logmile_dir_flag in ["E", "W"]:
+            for d in ["E", "W"]:
+                current_count = dirs.count(d)
+                if current_count > last_max:
+                    last_max = current_count
+                    most_frequent_dir = d
+
         if most_frequent_dir is not None:
             return most_frequent_dir
         return "U"
@@ -105,7 +117,7 @@ def fetch_crash_reports(
             for col in columns:
                 if crash.get(col) is None:
                     if col == "report_type":
-                        crash[col] = infer_report_type(crash.get("report_no"), crash.get("fix_obj_desc"))
+                        crash[col] = infer_report_type(crash.get("report_no"))
                     else:
                         crash[col] = "NoData"
                 if col in ["rte_no", "year"]:
@@ -123,7 +135,7 @@ def fetch_crash_reports(
             crash["acc_date"] = format_date_str(crash["acc_date"])
             
             # infer crash direction based on the direction of travel of all vehicles involved
-            crash["crash_dir"] = get_crash_dir(crash.get("report_no"))
+            crash["crash_dir"] = get_crash_dir(crash.get("report_no"), crash.get("logmile_dir_flag"))
         return crashes
     else:
         r.raise_for_status()
@@ -147,8 +159,8 @@ def get_crash_directions(crashes: list) -> tuple:
     """
     crash_dirs = []
     for crash in crashes:
-        if crash["logmile_dir_flag"] not in crash_dirs:
-            crash_dirs.append(crash["logmile_dir_flag"])
+        if crash["crash_dir"] not in crash_dirs:
+            crash_dirs.append(crash["crash_dir"])
     crash_dirs.sort()
     return tuple(crash_dirs)
 
@@ -169,7 +181,7 @@ def count_fatal_crashes(crashes: list, year: int = None, crash_dir: str = None) 
             fatal_count_all += 1
             if int(crash["year"]) == year:
                 fatal_count_year += 1
-            if int(crash["year"]) == year and crash["logmile_dir_flag"] == crash_dir:
+            if int(crash["year"]) == year and crash["crash_dir"] == crash_dir:
                 fatal_count_year_with_dir += 1
     if year is not None and crash_dir is not None:
         return fatal_count_year_with_dir
@@ -194,7 +206,7 @@ def count_injuries(crashes: list, year: int = None, crash_dir: str = None) -> in
             injury_count_all += 1
             if int(crash["year"]) == year:
                 injury_count_year += 1
-            if int(crash["year"]) == year and crash["logmile_dir_flag"] == crash_dir:
+            if int(crash["year"]) == year and crash["crash_dir"] == crash_dir:
                 injury_count_year_with_dir += 1
     if year is not None and crash_dir is not None:
         return injury_count_year_with_dir
@@ -221,7 +233,7 @@ def count_property_damage(
             prop_damage_count_all += 1
             if year is not None and int(crash["year"]) == year:
                 prop_damage_count_year += 1
-            if int(crash["year"]) == year and crash["logmile_dir_flag"] == crash_dir:
+            if int(crash["year"]) == year and crash["crash_dir"] == crash_dir:
                 prop_damage_count_year_with_dir += 1
     if year is not None and crash_dir is not None:
         return prop_damage_count_year_with_dir
@@ -268,7 +280,7 @@ def count_collision_type(
             collision_type_count += 1
             if year is not None and int(crash["year"]) == year:
                 collision_type_count_year += 1
-            if int(crash["year"]) == year and crash["logmile_dir_flag"] == crash_dir:
+            if int(crash["year"]) == year and crash["crash_dir"] == crash_dir:
                 collision_type_count_year_with_dir += 1
     if year is not None and crash_dir is not None:
         return collision_type_count_year_with_dir
@@ -290,7 +302,7 @@ def calculate_total_reduction(crashes_df: DataFrame, direction: str = None) -> d
     if direction is None:
         crash_data = crashes_df
     else:
-        crash_data = crashes_df[crashes_df.logmile_dir_flag == direction]
+        crash_data = crashes_df[crashes_df.crash_dir == direction]
 
     res["NUMBER OF ACCIDENTS"] = crash_data.shape[0]
 
@@ -329,7 +341,7 @@ def calculate_fatal_reduction(crashes_df: DataFrame, direction: str = None) -> d
         crash_data = crashes_df[crashes_df.report_type == "Fatal Crash"]
     else:
         crash_data = crashes_df[crashes_df.report_type == "Fatal Crash"][
-            crashes_df.logmile_dir_flag == direction
+            crashes_df.crash_dir == direction
         ]
 
     if not crash_data.empty:
@@ -380,7 +392,7 @@ def calculate_injury_reduction(crashes_df: DataFrame, direction: str = None) -> 
         crash_data = crashes_df[crashes_df.report_type == "Injury Crash"]
     else:
         crash_data = crashes_df[crashes_df.report_type == "Injury Crash"][
-            crashes_df.logmile_dir_flag == direction
+            crashes_df.crash_dir == direction
         ]
     if not crash_data.empty:
         res["NUMBER OF ACCIDENTS"] = crash_data.shape[0]
@@ -430,7 +442,7 @@ def calculate_prop_damage_reduction(
         crash_data = crashes_df[crashes_df.report_type == "Property Damage Crash"]
     else:
         crash_data = crashes_df[crashes_df.report_type == "Property Damage Crash"][
-            crashes_df.logmile_dir_flag == direction
+            crashes_df.crash_dir == direction
         ]
 
     if not crash_data.empty:
@@ -501,7 +513,7 @@ def calculate_collision_type_reduction(
         crash_data = crashes_df[crashes_df.collision_type_desc == collision_type]
     else:
         crash_data = crashes_df[crashes_df.collision_type_desc == collision_type][
-            crashes_df.logmile_dir_flag == direction
+            crashes_df.crash_dir == direction
         ]
 
     if not crash_data.empty:
