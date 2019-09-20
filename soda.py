@@ -5,6 +5,37 @@ import re
 from pandas import DataFrame
 
 
+def infer_report_type(report_no: str, fix_obj_desc: str) -> str:
+    """
+    Look at all person and struck object details related to report_no and determine if there are fatalities, injuries or property damage.
+    Returns str one of 'Fatal Crash', 'Injury Crash' or 'Property Damage Crash'.
+    """
+    # Person Details API
+    url = f"https://opendata.maryland.gov/resource/py4c-dicf.json?report_no={report_no}"
+    return
+
+def get_crash_dir(report_no: str):
+    """
+    Look at vehicle details related to report_no to determine the direction of the crash.
+    Returns str representing a single cardinal direction code, one of 'N', 'S', 'E', 'W' or 'U' for unknown.
+    """
+    # Vehicle Details API
+    url = f"https://opendata.maryland.gov/resource/mhft-5t5y.json?report_no={report_no}"
+    return
+
+def format_time_str(time_str:str) -> str:
+    # reformat crash time into hh:mm:ss format
+    return f"{time_str[:2]}:{time_str[2:4]}:{time_str[4:]}"
+
+def format_date_str(date_str: str) -> str:
+    # ** date formats on SODA api is not standardized and has multiple variations **
+    # convert yyyymmdd format into yyyy-mm-dd
+    if re.match("\d{8}", date_str) is not None:
+        return f"{date_str[:4]}-{date_str[4:6]}-{date_str[6:]}"
+    # convert mm-dd-yyyy format into yyyy-mm-dd
+    elif re.match("\d{2}-\d{2}-\d{4}", date_str) is not None:
+        return f"{date_str[-4:]}-{date_str[0:2]}-{date_str[3:5]}"
+
 def fetch_crash_reports(
     url: str,
     route_prefix: str,
@@ -23,6 +54,7 @@ def fetch_crash_reports(
         "county_desc",
         "route_type_code",
         "rte_no",
+        "fix_obj_desc",
         "logmile_dir_flag",
         "log_mile",
         "acc_time",
@@ -39,28 +71,26 @@ def fetch_crash_reports(
             # handle missing attributes & data conversion
             for col in columns:
                 if crash.get(col) is None:
-                    crash[col] = "NoData"
+                    if col == "report_type":
+                        crash[col] = infer_report_type(crash.get("report_no"), crash.get("fix_obj_desc"))
+                    else:
+                        crash[col] = "NoData"
                 if col in ["rte_no", "year"]:
                     crash[col] = int(crash.get(col))
                 if col == "log_mile":
                     crash[col] = float(crash.get(col))
-            # reformat crash time into hh:mm:ss format
+            
+            # standarize crash time into hh:mm:ss format
             if ":" not in crash["acc_time"]:
                 crash[
                     "acc_time"
-                ] = f"{crash['acc_time'][:2]}:{crash['acc_time'][2:4]}:{crash['acc_time'][4:]}"
+                ] = format_time_str(crash["acc_time"])
 
-            # ** date formats on SODA api is not standardized and has multiple variations **
-            # convert yyyymmdd format into yyyy-mm-dd
-            if re.match("\d{8}", crash["acc_date"]) is not None:
-                crash[
-                    "acc_date"
-                ] = f"{crash['acc_date'][:4]}-{crash['acc_date'][4:6]}-{crash['acc_date'][6:]}"
-            # convert mm-dd-yyyy format into yyyy-mm-dd
-            elif re.match("\d{2}-\d{2}-\d{4}", crash["acc_date"]) is not None:
-                crash[
-                    "acc_date"
-                ] = f"{crash['acc_date'][-4:]}-{crash['acc_date'][0:2]}-{crash['acc_date'][3:5]}"
+            # standardize crash date field into yyyy-mm-dd format
+            crash["acc_date"] = format_date_str(crash["acc_date"])
+            
+            # infer crash direction based on the direction of travel of all vehicles involved
+            crash["crash_dir"] = get_crash_dir(crash.get("report_no"))
         return crashes
     else:
         r.raise_for_status()
