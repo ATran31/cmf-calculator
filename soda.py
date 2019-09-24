@@ -112,7 +112,6 @@ def fetch_crash_reports(
         "county_desc",
         "route_type_code",
         "rte_no",
-        "fix_obj_desc",
         "logmile_dir_flag",
         "log_mile",
         "acc_time",
