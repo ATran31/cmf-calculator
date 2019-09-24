@@ -3,6 +3,7 @@ import os
 from gooey import Gooey, GooeyParser
 import soda
 from studies import Study_Area
+from xlrd import XLRDError
 
 
 @Gooey(program_name="CMF Calculator", navigation="TABBED", image_dir="./img")
@@ -156,33 +157,53 @@ def main():
         args.input_cmf,
     )
 
-    # define crash reports
-    print("Fetching crash reports...", flush=True)
-    crashes = soda.fetch_crash_reports(
-        args.crash_data,
-        args.route_prefix,
-        args.route_number,
-        args.start_milepost,
-        args.end_milepost,
-        args.start_year,
-        args.end_year,
-    )
+    try:
+        # try to run analysis against local crash data by default
+        # exception will raise if no sheet named 'Crash Data' in workbook.
+        raw_crashes_df = pd.read_excel(args.input_cmf, sheet_name="Crash Data")
 
-    # loop through crashes and calculate total CMFs for each crash
-    # calculations should be for both travel directions and the total
-    # add the calculated value as a new crash attributes
-    print("Calculating individual crash CMF values...", flush=True)
-    for crash in crashes:
-        crash_cmfs = study.get_crash_cmfs(
-            crash_milepost=crash["log_mile"],
-            severity=crash["report_type"],
-            crash_type=crash["collision_type_desc"],
-            crash_dir=crash["logmile_dir_flag"],
-            crash_time=crash["acc_time"],
+        # TODO standardize column names to match column names returned by SODA API
+        # report_no -> report_no
+        # county -> county_desc
+        # ro -> route_type_code
+        # ute_n -> rte_no
+        # N/A -> logmile_dir_flag (this field only used when infering crash direction from API retrieved crashes)
+        # log_mile -> log_mile
+        # time -> acc_time
+        # yr,mo,da -> acc_date
+        # yr -> year
+        # sever -> report_type
+        # ct -> collision_type_desc
+        # d1 -> crash_dir
+
+    except XLRDError:
+        # define crash reports
+        print("Fetching crash reports...", flush=True)
+        crashes = soda.fetch_crash_reports(
+            args.crash_data,
+            args.route_prefix,
+            args.route_number,
+            args.start_milepost,
+            args.end_milepost,
+            args.start_year,
+            args.end_year,
         )
-        crash["calculated_cmf"] = study.reduce_cmfs(crash_cmfs)
 
-    crashes_df = pd.DataFrame(crashes)
+        # loop through crashes and calculate total CMFs for each crash
+        # calculations should be for both travel directions and the total
+        # add the calculated value as a new crash attributes
+        print("Calculating individual crash CMF values...", flush=True)
+        for crash in crashes:
+            crash_cmfs = study.get_crash_cmfs(
+                crash_milepost=crash["log_mile"],
+                severity=crash["report_type"],
+                crash_type=crash["collision_type_desc"],
+                crash_dir=crash["logmile_dir_flag"],
+                crash_time=crash["acc_time"],
+            )
+            crash["calculated_cmf"] = study.reduce_cmfs(crash_cmfs)
+
+        crashes_df = pd.DataFrame(crashes)
 
     print("Identifying unique crash types...", flush=True)
     crash_types = soda.get_crash_types(crashes_df)
