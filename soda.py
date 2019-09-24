@@ -19,10 +19,16 @@ def infer_report_type(report_no: str) -> str:
         injury_count = 0
         for person in people:
             # code 5 is fatal
-            if person.get("inj_sever_code") is not None and int(person.get("inj_sever_code")) == 5:
+            if (
+                person.get("inj_sever_code") is not None
+                and int(person.get("inj_sever_code")) == 5
+            ):
                 fatality_count += 1
             # 1 < code < 5 is injury
-            elif person.get("inj_sever_code") is not None and 1 < int(person.get("inj_sever_code")) < 5:
+            elif (
+                person.get("inj_sever_code") is not None
+                and 1 < int(person.get("inj_sever_code")) < 5
+            ):
                 injury_count += 1
         if fatality_count > 0:
             return "Fatal Crash"
@@ -134,45 +140,43 @@ def fetch_crash_reports(
 
             # standarize crash time into hh:mm:ss format
             if ":" not in crash["acc_time"]:
-                crash[
-                    "acc_time"
-                ] = format_time_str(crash["acc_time"])
+                crash["acc_time"] = format_time_str(crash["acc_time"])
 
             # standardize crash date field into yyyy-mm-dd format
             crash["acc_date"] = format_date_str(crash["acc_date"])
 
             # infer crash direction based on the direction of travel of all vehicles involved
-            crash["crash_dir"] = infer_crash_dir(crash.get("report_no"), crash.get("logmile_dir_flag"))
+            crash["crash_dir"] = infer_crash_dir(
+                crash.get("report_no"), crash.get("logmile_dir_flag")
+            )
         return crashes
     else:
         r.raise_for_status()
 
 
-def get_crash_types(crashes: list) -> tuple:
+def get_crash_types(crashes_df: DataFrame) -> tuple:
     """
     Return a tuple of distinct crash types.
     """
-    crash_types = []
-    for crash in crashes:
-        if crash["collision_type_desc"] not in crash_types:
-            crash_types.append(crash["collision_type_desc"])
-    crash_types.sort()
-    return tuple(crash_types)
+    unique_crash_types = crashes_df.loc[:, "collision_type_desc"].unique()
+    unique_crash_types.sort()
+    return tuple(unique_crash_types)
 
 
-def get_crash_directions(crashes: list) -> tuple:
+def get_crash_directions(crashes_df: DataFrame) -> tuple:
     """
     Returns a tuple of distinct crash_directions.
     """
-    crash_dirs = []
-    for crash in crashes:
-        if crash["crash_dir"] not in crash_dirs and crash["crash_dir"] != "NoData":
-            crash_dirs.append(crash["crash_dir"])
-    crash_dirs.sort()
-    return tuple(crash_dirs)
+    unique_crash_dirs = crashes_df.loc[:, "crash_dir"].unique()
+    unique_crash_dirs.sort()
+    # eliminate any rows with value of 'NoData'
+    dirs_no_missing_data = [x for x in unique_crash_dirs if x != "NoData"]
+    return tuple(dirs_no_missing_data)
 
 
-def count_fatal_crashes(crashes: list, year: int = None, crash_dir: str = None) -> int:
+def count_fatal_crashes(
+    crashes_df: DataFrame, year: int = None, crash_dir: str = None
+) -> int:
     """
     Return the number of fatal crashes.
     Keyword Arguments:
@@ -183,12 +187,12 @@ def count_fatal_crashes(crashes: list, year: int = None, crash_dir: str = None) 
     fatal_count_all = 0
     fatal_count_year = 0
     fatal_count_year_with_dir = 0
-    for crash in crashes:
-        if "fatal" in crash["report_type"].lower():
+    for crash in crashes_df.itertuples():
+        if "fatal" in crash.report_type.lower():
             fatal_count_all += 1
-            if int(crash["year"]) == year:
+            if crash.year == year:
                 fatal_count_year += 1
-            if int(crash["year"]) == year and crash["crash_dir"] == crash_dir:
+            if crash.year == year and crash.crash_dir == crash_dir:
                 fatal_count_year_with_dir += 1
     if year is not None and crash_dir is not None:
         return fatal_count_year_with_dir
@@ -197,7 +201,9 @@ def count_fatal_crashes(crashes: list, year: int = None, crash_dir: str = None) 
     return fatal_count_all
 
 
-def count_injuries(crashes: list, year: int = None, crash_dir: str = None) -> int:
+def count_injuries(
+    crashes_df: DataFrame, year: int = None, crash_dir: str = None
+) -> int:
     """
     Return the number of injury crashes.
     Keyword Arguments:
@@ -208,12 +214,12 @@ def count_injuries(crashes: list, year: int = None, crash_dir: str = None) -> in
     injury_count_all = 0
     injury_count_year = 0
     injury_count_year_with_dir = 0
-    for crash in crashes:
-        if "injury" in crash["report_type"].lower():
+    for crash in crashes_df.itertuples():
+        if "injury" in crash.report_type.lower():
             injury_count_all += 1
-            if int(crash["year"]) == year:
+            if crash.year == year:
                 injury_count_year += 1
-            if int(crash["year"]) == year and crash["crash_dir"] == crash_dir:
+            if crash.year == year and crash.crash_dir == crash_dir:
                 injury_count_year_with_dir += 1
     if year is not None and crash_dir is not None:
         return injury_count_year_with_dir
@@ -223,7 +229,7 @@ def count_injuries(crashes: list, year: int = None, crash_dir: str = None) -> in
 
 
 def count_property_damage(
-    crashes: list, year: int = None, crash_dir: str = None
+    crashes_df: DataFrame, year: int = None, crash_dir: str = None
 ) -> int:
     """
     Return the number of property damage crashes.
@@ -235,12 +241,12 @@ def count_property_damage(
     prop_damage_count_all = 0
     prop_damage_count_year = 0
     prop_damage_count_year_with_dir = 0
-    for crash in crashes:
-        if "property damage" in crash["report_type"].lower():
+    for crash in crashes_df.itertuples():
+        if "property damage" in crash.report_type.lower():
             prop_damage_count_all += 1
-            if year is not None and int(crash["year"]) == year:
+            if crash.year == year:
                 prop_damage_count_year += 1
-            if int(crash["year"]) == year and crash["crash_dir"] == crash_dir:
+            if crash.year == year and crash.crash_dir == crash_dir:
                 prop_damage_count_year_with_dir += 1
     if year is not None and crash_dir is not None:
         return prop_damage_count_year_with_dir
@@ -250,13 +256,13 @@ def count_property_damage(
 
 
 def count_collision_type(
-    crashes: list, crash_type: str, year: int = None, crash_dir: str = None
+    crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None
 ) -> int:
     """
     Return the number of crashes of a given type.
     Keyword Arguments:
     crashes (REQUIRED) - a list of dicts representing crash reports.
-    collision_type(REQUIRED) - a string representing a type of collision. Valid values are:
+    crash_type(REQUIRED) - a string representing a type of collision. Valid values are:
         Not Applicable
         Head On
         Head On Left Turn
@@ -282,12 +288,12 @@ def count_collision_type(
     collision_type_count = 0
     collision_type_count_year = 0
     collision_type_count_year_with_dir = 0
-    for crash in crashes:
-        if crash_type.lower() in crash["collision_type_desc"].lower():
+    for crash in crashes_df.itertuples():
+        if crash_type.lower() in crash.collision_type_desc.lower():
             collision_type_count += 1
-            if year is not None and int(crash["year"]) == year:
+            if crash.year == year:
                 collision_type_count_year += 1
-            if int(crash["year"]) == year and crash["crash_dir"] == crash_dir:
+            if crash.year == year and crash.crash_dir == crash_dir:
                 collision_type_count_year_with_dir += 1
     if year is not None and crash_dir is not None:
         return collision_type_count_year_with_dir

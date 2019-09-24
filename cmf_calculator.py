@@ -138,6 +138,12 @@ def main():
 
     args = parser.parse_args()
 
+    # define output reports to Excel
+    # the output report will be saved to the same location as the input Excel file containing CMF values defined for this study
+    out_dir = os.path.split(args.input_cmf)[0]
+    out_file = f"{args.route_prefix}-{args.route_number} [{args.start_milepost}-{args.end_milepost}] ({args.start_year}-{args.end_year}) CMF Analysis.xlsx"
+    xlsx_writer = pd.ExcelWriter(os.path.join(out_dir, out_file), engine="openpyxl")
+
     # define study area
     print("Configuring study area...", flush=True)
     study = Study_Area(
@@ -162,18 +168,6 @@ def main():
         args.end_year,
     )
 
-    print("Identifying unique crash types...", flush=True)
-    crash_types = soda.get_crash_types(crashes)
-
-    print("Identifying unique crash directions...", flush=True)
-    crash_directions = soda.get_crash_directions(crashes)
-
-    # define output reports to Excel
-    # the output report will be saved to the same location as the input Excel file containing CMF values defined for this study
-    out_dir = os.path.split(args.input_cmf)[0]
-    out_file = f"{args.route_prefix}-{args.route_number} [{args.start_milepost}-{args.end_milepost}] ({args.start_year}-{args.end_year}) CMF Analysis.xlsx"
-    xlsx_writer = pd.ExcelWriter(os.path.join(out_dir, out_file), engine="openpyxl")
-
     # loop through crashes and calculate total CMFs for each crash
     # calculations should be for both travel directions and the total
     # add the calculated value as a new crash attributes
@@ -189,6 +183,12 @@ def main():
         crash["calculated_cmf"] = study.reduce_cmfs(crash_cmfs)
 
     crashes_df = pd.DataFrame(crashes)
+
+    print("Identifying unique crash types...", flush=True)
+    crash_types = soda.get_crash_types(crashes_df)
+
+    print("Identifying unique crash directions...", flush=True)
+    crash_directions = soda.get_crash_directions(crashes_df)
 
     # lookup for crash direction code to full name for use in output report tables
     route_dirs = {
@@ -238,55 +238,55 @@ def main():
         for year in range(args.start_year, args.end_year + 1):
             # count fatal in year
             total_summ_df.loc[year, "Total"]["Fatal"] = soda.count_fatal_crashes(
-                crashes, year
+                crashes_df, year
             )
             # count fatal in year for each direction
             d0_summ_df.loc[year, route_dirs.get(crash_directions[0])][
                 "Fatal"
-            ] = soda.count_fatal_crashes(crashes, year, crash_directions[0])
+            ] = soda.count_fatal_crashes(crashes_df, year, crash_directions[0])
             # count injury in year
             total_summ_df.loc[year, "Total"]["Injury"] = soda.count_injuries(
-                crashes, year
+                crashes_df, year
             )
             # count injury in year for each direction
             d0_summ_df.loc[year, route_dirs.get(crash_directions[0])][
                 "Injury"
-            ] = soda.count_injuries(crashes, year, crash_directions[0])
+            ] = soda.count_injuries(crashes_df, year, crash_directions[0])
             # count property damage in year
             total_summ_df.loc[year, "Total"][
                 "Property Damage"
-            ] = soda.count_property_damage(crashes, year)
+            ] = soda.count_property_damage(crashes_df, year)
             # count property damage in year for each direction
             d0_summ_df.loc[year, route_dirs.get(crash_directions[0])][
                 "Property Damage"
-            ] = soda.count_property_damage(crashes, year, crash_directions[0])
+            ] = soda.count_property_damage(crashes_df, year, crash_directions[0])
             for crash_type in crash_types:
                 # count specific crash types in year
                 total_summ_df.loc[year, "Total"][
                     crash_type
-                ] = soda.count_collision_type(crashes, crash_type, year)
+                ] = soda.count_collision_type(crashes_df, crash_type, year)
                 # count specific crash types in each direction
                 d0_summ_df.loc[year, route_dirs.get(crash_directions[0])][
                     crash_type
                 ] = soda.count_collision_type(
-                    crashes, crash_type, year, crash_directions[0]
+                    crashes_df, crash_type, year, crash_directions[0]
                 )
 
             if len(crash_directions) > 1:
                 d1_summ_df.loc[year, route_dirs.get(crash_directions[1])][
                     "Fatal"
-                ] = soda.count_fatal_crashes(crashes, year, crash_directions[1])
+                ] = soda.count_fatal_crashes(crashes_df, year, crash_directions[1])
                 d1_summ_df.loc[year, route_dirs.get(crash_directions[1])][
                     "Injury"
-                ] = soda.count_injuries(crashes, year, crash_directions[1])
+                ] = soda.count_injuries(crashes_df, year, crash_directions[1])
                 d1_summ_df.loc[year, route_dirs.get(crash_directions[1])][
                     "Property Damage"
-                ] = soda.count_property_damage(crashes, year, crash_directions[1])
+                ] = soda.count_property_damage(crashes_df, year, crash_directions[1])
                 for crash_type in crash_types:
                     d1_summ_df.loc[year, route_dirs.get(crash_directions[1])][
                         crash_type
                     ] = soda.count_collision_type(
-                        crashes, crash_type, year, crash_directions[1]
+                        crashes_df, crash_type, year, crash_directions[1]
                     )
 
         # write crash summary report
