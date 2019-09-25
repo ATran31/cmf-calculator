@@ -1,7 +1,7 @@
 import pandas as pd
 import os
 from gooey import Gooey, GooeyParser
-import soda
+import crash_processor as cp
 from studies import Study_Area
 from xlrd import XLRDError
 
@@ -162,7 +162,7 @@ def main():
         # exception will raise if no sheet named 'Crash Data' in workbook.
         raw_crashes_df = pd.read_excel(args.input_cmf, sheet_name="Crash Data")
 
-        # TODO standardize column names to match column names returned by SODA API
+        # TODO standardize column names to match column names returned by cp API
         # report_no -> report_no
         # county -> county_desc
         # ro -> route_type_code
@@ -179,7 +179,7 @@ def main():
     except XLRDError:
         # define crash reports
         print("Fetching crash reports...", flush=True)
-        crashes = soda.fetch_crash_reports(
+        crashes = cp.fetch_crash_reports(
             args.crash_data,
             args.route_prefix,
             args.route_number,
@@ -206,10 +206,10 @@ def main():
         crashes_df = pd.DataFrame(crashes)
 
     print("Identifying unique crash types...", flush=True)
-    crash_types = soda.get_crash_types(crashes_df)
+    crash_types = cp.get_crash_types(crashes_df)
 
     print("Identifying unique crash directions...", flush=True)
-    crash_directions = soda.get_crash_directions(crashes_df)
+    crash_directions = cp.get_crash_directions(crashes_df)
 
     # lookup for crash direction code to full name for use in output report tables
     route_dirs = {
@@ -258,55 +258,55 @@ def main():
 
         for year in range(args.start_year, args.end_year + 1):
             # count fatal in year
-            total_summ_df.loc[year, "Total"]["Fatal"] = soda.count_fatal_crashes(
+            total_summ_df.loc[year, "Total"]["Fatal"] = cp.count_fatal_crashes(
                 crashes_df, year
             )
             # count fatal in year for each direction
             d0_summ_df.loc[year, route_dirs.get(crash_directions[0])][
                 "Fatal"
-            ] = soda.count_fatal_crashes(crashes_df, year, crash_directions[0])
+            ] = cp.count_fatal_crashes(crashes_df, year, crash_directions[0])
             # count injury in year
-            total_summ_df.loc[year, "Total"]["Injury"] = soda.count_injuries(
+            total_summ_df.loc[year, "Total"]["Injury"] = cp.count_injuries(
                 crashes_df, year
             )
             # count injury in year for each direction
             d0_summ_df.loc[year, route_dirs.get(crash_directions[0])][
                 "Injury"
-            ] = soda.count_injuries(crashes_df, year, crash_directions[0])
+            ] = cp.count_injuries(crashes_df, year, crash_directions[0])
             # count property damage in year
             total_summ_df.loc[year, "Total"][
                 "Property Damage"
-            ] = soda.count_property_damage(crashes_df, year)
+            ] = cp.count_property_damage(crashes_df, year)
             # count property damage in year for each direction
             d0_summ_df.loc[year, route_dirs.get(crash_directions[0])][
                 "Property Damage"
-            ] = soda.count_property_damage(crashes_df, year, crash_directions[0])
+            ] = cp.count_property_damage(crashes_df, year, crash_directions[0])
             for crash_type in crash_types:
                 # count specific crash types in year
                 total_summ_df.loc[year, "Total"][
                     crash_type
-                ] = soda.count_collision_type(crashes_df, crash_type, year)
+                ] = cp.count_collision_type(crashes_df, crash_type, year)
                 # count specific crash types in each direction
                 d0_summ_df.loc[year, route_dirs.get(crash_directions[0])][
                     crash_type
-                ] = soda.count_collision_type(
+                ] = cp.count_collision_type(
                     crashes_df, crash_type, year, crash_directions[0]
                 )
 
             if len(crash_directions) > 1:
                 d1_summ_df.loc[year, route_dirs.get(crash_directions[1])][
                     "Fatal"
-                ] = soda.count_fatal_crashes(crashes_df, year, crash_directions[1])
+                ] = cp.count_fatal_crashes(crashes_df, year, crash_directions[1])
                 d1_summ_df.loc[year, route_dirs.get(crash_directions[1])][
                     "Injury"
-                ] = soda.count_injuries(crashes_df, year, crash_directions[1])
+                ] = cp.count_injuries(crashes_df, year, crash_directions[1])
                 d1_summ_df.loc[year, route_dirs.get(crash_directions[1])][
                     "Property Damage"
-                ] = soda.count_property_damage(crashes_df, year, crash_directions[1])
+                ] = cp.count_property_damage(crashes_df, year, crash_directions[1])
                 for crash_type in crash_types:
                     d1_summ_df.loc[year, route_dirs.get(crash_directions[1])][
                         crash_type
-                    ] = soda.count_collision_type(
+                    ] = cp.count_collision_type(
                         crashes_df, crash_type, year, crash_directions[1]
                     )
 
@@ -357,15 +357,15 @@ def main():
 
     for col in cols:
         if col == "Total":
-            res_total = soda.calculate_total_reduction(crashes_df)
+            res_total = cp.calculate_total_reduction(crashes_df)
         elif col == "Fatal":
-            res_total = soda.calculate_fatal_reduction(crashes_df)
+            res_total = cp.calculate_fatal_reduction(crashes_df)
         elif col == "Injury":
-            res_total = soda.calculate_injury_reduction(crashes_df)
+            res_total = cp.calculate_injury_reduction(crashes_df)
         elif col == "Property Damage":
-            res_total = soda.calculate_prop_damage_reduction(crashes_df)
+            res_total = cp.calculate_prop_damage_reduction(crashes_df)
         else:
-            res_total = soda.calculate_collision_type_reduction(crashes_df, col)
+            res_total = cp.calculate_collision_type_reduction(crashes_df, col)
 
         total_change_df.loc["NUMBER OF ACCIDENTS", "TOTAL"][col] = res_total[
             "NUMBER OF ACCIDENTS"
@@ -389,15 +389,15 @@ def main():
     d0_crashes_df = crashes_df[crashes_df.crash_dir == crash_directions[0]]
     for col in cols:
         if col == "Total":
-            res_total = soda.calculate_total_reduction(d0_crashes_df)
+            res_total = cp.calculate_total_reduction(d0_crashes_df)
         elif col == "Fatal":
-            res_total = soda.calculate_fatal_reduction(d0_crashes_df)
+            res_total = cp.calculate_fatal_reduction(d0_crashes_df)
         elif col == "Injury":
-            res_total = soda.calculate_injury_reduction(d0_crashes_df)
+            res_total = cp.calculate_injury_reduction(d0_crashes_df)
         elif col == "Property Damage":
-            res_total = soda.calculate_prop_damage_reduction(d0_crashes_df)
+            res_total = cp.calculate_prop_damage_reduction(d0_crashes_df)
         else:
-            res_total = soda.calculate_collision_type_reduction(d0_crashes_df, col)
+            res_total = cp.calculate_collision_type_reduction(d0_crashes_df, col)
 
         d0_change_df.loc["NUMBER OF ACCIDENTS", route_dirs.get(crash_directions[0])][col] = res_total["NUMBER OF ACCIDENTS"]
         d0_change_df.loc["CRASH MODIFICATION FACTOR (CMF)", route_dirs.get(crash_directions[0])][col] = res_total[
@@ -424,15 +424,15 @@ def main():
         d1_crashes_df = crashes_df[crashes_df.crash_dir == crash_directions[1]]
         for col in cols:
             if col == "Total":
-                res_total = soda.calculate_total_reduction(d1_crashes_df)
+                res_total = cp.calculate_total_reduction(d1_crashes_df)
             elif col == "Fatal":
-                res_total = soda.calculate_fatal_reduction(d1_crashes_df)
+                res_total = cp.calculate_fatal_reduction(d1_crashes_df)
             elif col == "Injury":
-                res_total = soda.calculate_injury_reduction(d1_crashes_df)
+                res_total = cp.calculate_injury_reduction(d1_crashes_df)
             elif col == "Property Damage":
-                res_total = soda.calculate_prop_damage_reduction(d1_crashes_df)
+                res_total = cp.calculate_prop_damage_reduction(d1_crashes_df)
             else:
-                res_total = soda.calculate_collision_type_reduction(d1_crashes_df, col)
+                res_total = cp.calculate_collision_type_reduction(d1_crashes_df, col)
 
             d1_change_df.loc["NUMBER OF ACCIDENTS", route_dirs.get(crash_directions[1])][col] = res_total[
                 "NUMBER OF ACCIDENTS"

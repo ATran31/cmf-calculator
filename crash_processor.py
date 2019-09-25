@@ -301,6 +301,69 @@ def count_collision_type(
     return collision_type_count
 
 
+def count_rear_end(crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None) -> int:
+    """
+    Returns the number of rear end crashes.
+    """
+    pass
+
+
+def count_sideswipe(crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None) -> int:
+    """
+    Returns the number of sideswipe crashes.
+    """
+    pass
+
+
+def count_left_turn(crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None) -> int:
+    """
+    Returns the number of left-turn crashes.
+    """
+    pass
+
+
+def count_fixed_object(crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None) -> int:
+    """
+    Returns the number of fixed object crashes
+    """
+    pass
+
+
+def count_angle(crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None) -> int:
+    """
+    Returns the number of angle crashes.
+    """
+    pass
+
+
+def count_opp_dir(crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None) -> int:
+    """
+    Returns the number of opposite direction crashes.
+    """
+    pass
+
+
+def count_parked(crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None) -> int:
+    """
+    Returns the number of parked vehicle crashes.
+    """
+    pass
+
+
+def count_pedestrian(crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None) -> int:
+    """
+    Returns the number of pedestrian crashes.
+    """
+    pass
+
+
+def count_other(crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None) -> int:
+    """
+    Returns the number of 'other' crashes.
+    """
+    pass
+
+
 def calculate_total_reduction(crashes_df: DataFrame, direction: str = None) -> dict:
     """
     Calculates total CMF and CRF values for all crashes in crashes_df.
