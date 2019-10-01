@@ -329,12 +329,10 @@ def main():
                 crashes_df, year
             )
 
-            # TODO count total other
-            # to be implemented when the function is ready
             # count total other
-            # summary_dfs[0].loc[year, "Total"]["Other"] = cp.count_other(
-            #     crashes_df, year
-            # )
+            summary_dfs[0].loc[year, "Total"]["Other"] = cp.count_other(
+                crashes_df, year
+            )
 
             for d in crash_directions:
                 # count fatal in year for crash direction
@@ -392,13 +390,10 @@ def main():
                     "Pedestrian"
                 ] = cp.count_pedestrian(crashes_df, year, d)
 
-                # TODO count total other
-                # to be implemented when the function is ready
-                # summary_dfs[crash_directions.index(d) + 1].loc[
-                #     year, route_dirs.get(d)
-                # ]["Other"] = cp.count_other(
-                #     crashes_df, year, d
-                # )
+                # count total other
+                summary_dfs[crash_directions.index(d) + 1].loc[year, route_dirs.get(d)][
+                    "Other"
+                ] = cp.count_other(crashes_df, year, d)
 
         # write crash summary report
         print("Writing crash summaries...", flush=True)
