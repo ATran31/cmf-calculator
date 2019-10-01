@@ -317,7 +317,7 @@ def count_collision_type(
 
 
 def count_rear_end(
-    crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None
+    crashes_df: DataFrame, year: int = None, crash_dir: str = None
 ) -> int:
     """
     Returns the number of rear end crashes.
@@ -340,7 +340,7 @@ def count_rear_end(
 
 
 def count_sideswipe(
-    crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None
+    crashes_df: DataFrame, year: int = None, crash_dir: str = None
 ) -> int:
     """
     Returns the number of sideswipe crashes.
@@ -363,7 +363,7 @@ def count_sideswipe(
 
 
 def count_left_turn(
-    crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None
+    crashes_df: DataFrame, year: int = None, crash_dir: str = None
 ) -> int:
     """
     Returns the number of left-turn crashes.
@@ -386,7 +386,7 @@ def count_left_turn(
 
 
 def count_fixed_object(
-    crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None
+    crashes_df: DataFrame, year: int = None, crash_dir: str = None
 ) -> int:
     """
     Returns the number of fixed object crashes
@@ -408,9 +408,7 @@ def count_fixed_object(
     return fxobj_count_all
 
 
-def count_angle(
-    crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None
-) -> int:
+def count_angle(crashes_df: DataFrame, year: int = None, crash_dir: str = None) -> int:
     """
     Returns the number of angle crashes.
     """
@@ -432,7 +430,7 @@ def count_angle(
 
 
 def count_opp_dir(
-    crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None
+    crashes_df: DataFrame, year: int = None, crash_dir: str = None
 ) -> int:
     """
     Returns the number of opposite direction crashes.
@@ -454,9 +452,7 @@ def count_opp_dir(
     return opdir_count_all
 
 
-def count_parked(
-    crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None
-) -> int:
+def count_parked(crashes_df: DataFrame, year: int = None, crash_dir: str = None) -> int:
     """
     Returns the number of parked vehicle crashes.
     """
@@ -478,7 +474,7 @@ def count_parked(
 
 
 def count_pedestrian(
-    crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None
+    crashes_df: DataFrame, year: int = None, crash_dir: str = None
 ) -> int:
     """
     Returns the number of pedestrian crashes.
@@ -500,9 +496,7 @@ def count_pedestrian(
     return ped_count_all
 
 
-def count_other(
-    crashes_df: DataFrame, crash_type: str, year: int = None, crash_dir: str = None
-) -> int:
+def count_other(crashes_df: DataFrame, year: int = None, crash_dir: str = None) -> int:
     """
     Returns the number of 'other' crashes.
     """
@@ -511,7 +505,7 @@ def count_other(
     # Does it actually refer to the 'other' category or does it refer to all collision types that are not one of
     # rear end, sideswipe, lef turn, fixed object , angle, opposite dir
     # or harm events that are not pedestrian/parked vehicle.
-    pass
+    return
 
 
 def calculate_fatal_reduction(crashes_df: DataFrame, direction: str = None) -> dict:
